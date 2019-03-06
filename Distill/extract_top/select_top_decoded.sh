@@ -1,4 +1,5 @@
-python select_top_decoded.py $1 $2 
+#!/usr/bin/env bash
+python select_top_decoded.py $1 $2
 
 #python select_top_decoded.py /mnt/vol/gfsai-east/ai-group/users/jiwei/Generation/conversation/data/decode/dialogue_BS_four_iter1_Bsize1.txt top_response_four_index_iter1.txt
 #python NumToString.py movie_25000 top_response_four_index_iter1.txt top_response_four_word_iter1.txt

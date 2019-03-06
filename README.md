@@ -77,7 +77,7 @@ to train the backward model p(s|t), run
         -test_file ../data/s_given_t_test.txt \
         -saveFolder save_s_given_t
 
-the trained models will be stored in ``save_s_given_t/model*``. input parameters will be stored ``insave_s_given_t/params``
+the trained models will be stored in ``save_s_given_t/model*``. input parameters will be stored in ``save_s_given_t/params``
 
 # Decode
 
@@ -267,7 +267,7 @@ To run the decoder with a pre-trained Soothsayer model of backward probability
         -PredictorWeight 1 \
         -Task backward
     
-If you want to perform MMI reranking at the end,  -MMI_params_file and -MMI_model_file have to be pre-specified
+If you want to perform MMI reranking at the end,  ```-MMI_params_file``` and ```-MMI_model_file``` have to be pre-specified
 
 # Distill
 

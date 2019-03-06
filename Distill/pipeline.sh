@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 cd ../decode
 th decode.lua -params_file hyperparameterFile_pretrained_seq2seq -model_file modelFile_pretrained_seq2seq -batch_size 640 -InputFile yourInputFileToDecode -OutputFile yourOutputFile -batch_size -max_decoded_num 1000000
 echo "decode done"
