@@ -14,6 +14,7 @@ This project is maintained by [Jiwei Li](http://www.stanford.edu/~jiweil/). Feel
 # Setup
 
 This code requires Torch7 and the following luarocks packages 
+* [torch-trepl](https://github.com/torch/trepl.git)
 * [fbtorch](https://github.com/facebook/fbtorch)
 * [cutorch](https://github.com/torch/cutorch)
 * [cunn](https://github.com/torch/cunn)
@@ -22,7 +23,7 @@ This code requires Torch7 and the following luarocks packages
 * [tds](https://github.com/torch/tds)
 
 # Download Data
-Processed traning datasets can be downloaded at [link](http://nlp.stanford.edu/data/OpenSubData.tar) (unpacks to 8.9GB). All tokens have been transformed to indexes (dictionary file found at data/movie_2500)
+Processed training datasets can be downloaded at [link](http://nlp.stanford.edu/data/OpenSubData.tar) (unpacks to 8.9GB). All tokens have been transformed to indexes (dictionary file found at ``data/movie_2500``)
 
     t_given_s_dialogue_length2_3.txt: dialogue length 2, minimum utterance length 3, sources and targets separated by "|"
     s_given_t_dialogue_length2_3.txt: dialogue length 2, minimum utterance length 3, targets and sources separated by "|"
@@ -56,19 +57,27 @@ Available options include:
     -saveModel      (default true, whether to save the trained model)
     -dictPath       (default ../data/movie_25000, dictionary file)
 
-training/dev/testing data: each line corresponds a source-target pair (in t_given_s*.txt) or target-source pair (in s_given_t*.txt) separated by "|". 
+training/dev/testing data: each line corresponds a source-target pair (in ``t_given_s*.txt``) or target-source pair (in ``s_given_t*.txt``) separated by ``"|"``. 
 
 to train the forward p(t|s) model, run
         
-    th train_atten.lua -train_file ../data/t_given_s_train.txt -dev_file ../data/t_given_s_dev.txt -test_file ../data/t_given_s_test.txt -saveFolder save_t_given_s
+    th train_atten.lua \
+        -train_file ../data/t_given_s_train.txt \
+        -dev_file ../data/t_given_s_dev.txt \
+        -test_file ../data/t_given_s_test.txt \
+        -saveFolder save_t_given_s
 
-After training, the trained models will be saved in save_t_given_s/model*. input parameters will be stored in save_t_given_s/params
+After training, the trained models will be saved in ``save_t_given_s/model*``. input parameters will be stored in ``save_t_given_s/params``
 
 to train the backward model p(s|t), run
 
-    th train_atten.lua -train_file ../data/s_given_t_train.txt -dev_file ../data/s_given_t_dev.txt -test_file ../data/s_given_t_test.txt -saveFolder save_s_given_t
+    th train_atten.lua \
+        -train_file ../data/s_given_t_train.txt \
+        -dev_file ../data/s_given_t_dev.txt \
+        -test_file ../data/s_given_t_test.txt \
+        -saveFolder save_s_given_t
 
-the trained models will be stored in save_s_given_t/model*. input parameters will be stored insave_s_given_t/params
+the trained models will be stored in ``save_s_given_t/model*``. input parameters will be stored ``insave_s_given_t/params``
 
 # Decode
 
@@ -100,7 +109,7 @@ to run the model
     
     th decode.lua [params]
 
-to run the mutual information reranking model in [1],  -MMI_params_file and -MMI_model_file need to be pre-specified
+to run the mutual information reranking model in [1],  ```-MMI_params_file``` and ``-MMI_model_file`` need to be pre-specified
 
 # Persona_Addressee
 
@@ -115,7 +124,7 @@ Additional options include:
     -AddresseeNum   (default 10000, number of distinct addressees)
     -speakerSetting (taking values of "speaker" or "speaker_addressee". For "speaker", only the user who speaks is modeled. For "speaker_addressee" both the speaker and the addressee are modeled)
 
-data: the first token of a source line is the index of the Addressee and the first token in the target line is the index of the speaker. For example: 2 45 43 6|1 123 45 means that the index of the addressee is 2 and the index of the speaker is 1
+data: the first token of a source line is the index of the Addressee and the first token in the target line is the index of the speaker. For example: ``2 45 43 6|1 123 45`` means that the index of the addressee is 2 and the index of the speaker is 1
 
 to train the model
 
@@ -177,7 +186,7 @@ to train the model
 
     th train.lua [params]
 
-Note: if you encounter the following error "bad argument # 2 to '?' (out of range) in function model_backward" after training the model for tens of hours, this means the model has exploded (see the teacher forcing part in Section 3.2 of the paper). The reason why the error appears as "bad argument #2 to '?'" is because of the sampling algorithm in Torch. If you encounter this issue, shrink the value of the variable -Timeslr.
+Note: if you encounter the following error ``"bad argument # 2 to '?' (out of range) in function model_backward"`` after training the model for tens of hours, this means the model has exploded (see the teacher forcing part in Section 3.2 of the paper). The reason why the error appears as ``"bad argument #2 to '?'"`` is because of the sampling algorithm in Torch. If you encounter this issue, shrink the value of the variable ``-Timeslr``.
 
 # Future_Prediction 
 
@@ -249,7 +258,14 @@ To run the decoder with a pre-trained Soothsayer model of length:
     
 To run the decoder with a pre-trained Soothsayer model of backward probability
 
-    th decode.lua -params_file hyperparameterFile_pretrained_seq2seq -model_file modelFile_pretrained_seq2seq -InputFile yourInputFileToDecode -OutputFile yourOutputFile -FuturePredictorModelFile modelFile_Soothsayer_backward -PredictorWeight 1 -Task backward
+    th decode.lua \
+        -params_file hyperparameterFile_pretrained_seq2seq \
+        -model_file modelFile_pretrained_seq2seq \
+        -InputFile yourInputFileToDecode \
+        -OutputFile yourOutputFile \
+        -FuturePredictorModelFile modelFile_Soothsayer_backward \
+        -PredictorWeight 1 \
+        -Task backward
     
 If you want to perform MMI reranking at the end,  -MMI_params_file and -MMI_model_file have to be pre-specified
 
@@ -263,17 +279,24 @@ to run the model:
 
 * First, decode a large input set (more than 1 million) using a pre-trained Seq2Seq model
 
-    cd ../decode
 
-    th decode.lua -params_file hyperparameterFile_pretrained_seq2seq -model_file modelFile_pretrained_seq2seq -batch_size 640 -InputFile yourTrainingData -OutputFile yourDecodingOutputFile -batch_size -max_decoded_num 1000000
+    cd ../decode
+    th decode.lua \
+        -params_file hyperparameterFile_pretrained_seq2seq \
+        -model_file modelFile_pretrained_seq2seq \
+        -batch_size 640 \
+        -InputFile yourTrainingData \
+        -OutputFile yourDecodingOutputFile \
+        -batch_size -max_decoded_num 1000000
 
 * Second, extract top frequent responses
 
-    cd ../distill/extract_top 
 
+    cd ../distill/extract_top 
     sh select_top_decoded.sh yourDecodingOutputFile yourFileToStoreTopResponses
 
 * Third, compute relevance scores for the entire training set and then distill the training set. The code provides two different ways to compute the scores: using a pre-trained Seq2Seq model or averaging Glove embeddings
+
 
     cd ../Glove or cd ../Encoder
 
@@ -303,12 +326,18 @@ The remaining data after this round of data distillation will be stored in FileF
 ## Encoder
 use a pre-trained Seq2Seq model for data distillation. Other than input parameters in Glove, the path for a pre-trained Seq2Seq model needs to be pre-specified
 
-        -params_file        (default "../../Atten/save_t_given_s/params", hyperparameters for the pre-trained generative model)
-        -model_file     (default ../../Atten/save_t_given_s/model1, path for loading a pre-trained generative model)
+    -params_file    (default "../../Atten/save_t_given_s/params", hyperparameters for the pre-trained generative model)
+    -model_file     (default ../../Atten/save_t_given_s/model1, path for loading a pre-trained generative model)
     
 to run the model:
 
-    th distill_encode.lua -TopResponseFile yourFileToStoreTopResponses -TrainingData yourTrainingData -OutputFile FileForRemainingData -params_file Seq2SeqParamsFile -model_file Seq2SeqModelFile -batch_size 6400
+    th distill_encode.lua \
+        -TopResponseFile yourFileToStoreTopResponses \
+        -TrainingData yourTrainingData \
+        -OutputFile FileForRemainingData \
+        -params_file Seq2SeqParamsFile \
+        -model_file Seq2SeqModelFile \
+        -batch_size 6400
 
 
 ## Acknowledgments
