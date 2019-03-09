@@ -3,8 +3,7 @@
 This project contains the code or part of the code for the dialogue generation part in the following papers:
 * [1] J.Li, M.Galley, C.Brockett, J.Gao and B.Dolan. "[A Diversity-Promoting Objective Function for Neural Conversation Models](https://arxiv.org/pdf/1510.03055.pdf)". NAACL2016.
 * [2] J.Li, M.Galley, C.Brockett, J.Gao and B.Dolan. "[A persona-based neural conversation model](https://arxiv.org/pdf/1603.06155.pdf)". ACL2016.
-* [3] J.Li, W.Monroe, T.Shi, A.Ritter, D.Jurafsky. "[Adversarial Learning for Neural Dialogue Generation
-](https://arxiv.org/pdf/1701.06547.pdf)" arxiv
+* [3] J.Li, W.Monroe, T.Shi, A.Ritter, D.Jurafsky. "[Adversarial Learning for Neural Dialogue Generation](https://arxiv.org/pdf/1701.06547.pdf)" arxiv
 * [4] J.Li, W.Monroe, D.Jurafsky. "[Learning to Decode for Future Success](https://arxiv.org/pdf/1701.06549.pdf)" arxiv
 * [5] J.Li, W.Monroe, D.Jurafsky. "[A Simple, Fast Diverse Decoding Algorithm for Neural Generation](https://arxiv.org/pdf/1611.08562.pdf)" arxiv
 * [6] J.Li, W.Monroe, D.Jurafsky. "Data Distillation for Controlling Specificity in Dialogue Generation (to appear on arxiv)"
