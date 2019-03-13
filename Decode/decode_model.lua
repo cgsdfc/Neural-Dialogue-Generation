@@ -1,12 +1,18 @@
-local decode_model = {}
 local stringx = require('pl.stringx')
+local decode_model = {}
+
+-- Inherit from atten model.
 local base_model = torch.reload("../Atten/atten")
 setmetatable(decode_model, { __index = base_model })
 
+-- Constructor of decode_model.
 function decode_model:Initial(params)
+    -- Load hparams from -params_file.
     local params_file = torch.DiskFile(params.params_file, "r"):binary();
     local model_params = params_file:readObject()
     params_file:close();
+
+    -- Fill in blanks of command line argument using pre-trained hparams.
     for i, v in pairs(model_params) do
         if params[i] == nil then
             params[i] = v;
@@ -14,6 +20,8 @@ function decode_model:Initial(params)
     end
     self.params = params;
     self:DecoderInitial()
+
+    -- Load MMI model.
     if self.params.MMI then
         self:InitialReverse()
     end
@@ -41,18 +49,31 @@ function decode_model:DecoderInitial()
     self:ReadDict()
 end
 
+-- Load and restore self.MMI_model from saved model.
 function decode_model:InitialReverse()
+    -- Instatiate an atten model.
     self.MMI_model = torch.reload("../Atten/atten");
+
+    -- Load the hparams for the training from disk.
     local file = torch.DiskFile(self.params.MMI_params_file, "r"):binary();
+    -- `params` means hparams here.
     local params = file:readObject();
+
+    -- Override some params.
     params.batch_size = self.params.batch_size
     params.onlyPred = true
     file:close();
+
+    -- Initialize the atten model.
     self.MMI_model.mode = "test"
     self.MMI_model:Initial(params)
+
+    -- Load the trained model from disk.
     local file = torch.DiskFile(self.params.MMI_model_file, "r"):binary()
     local model_params = file:readObject();
     file:close();
+
+    -- Restore the model in memory from the disk file.
     for i = 1, #self.MMI_model.Modules do
         local parameter, _ = self.MMI_model.Modules[i]:parameters()
         for j = 1, #parameter do
@@ -133,7 +154,7 @@ function decode_model:decode_BS()
     local span_index1 = torch.expand(torch.reshape(torch.expand(torch.reshape(torch.range(1, self.params.beam_size), self.params.beam_size, 1), self.params.beam_size, self.params.beam_size), 1, self.params.beam_size * self.params.beam_size), self.Word_s:size(1), self.params.beam_size * self.params.beam_size):cuda();
     -- if batch_size=3  beam_size=2 span_index1 is
     --1 1 2 2
-    --1 1 2 2 
+    --1 1 2 2
     --1 1 2 2
     local span_index2 = torch.expand(torch.reshape(self.params.beam_size * (torch.range(1, self.Word_s:size(1)) - 1), self.Word_s:size(1), 1), self.Word_s:size(1), self.params.beam_size):cuda();
     -- if batch_size=3  beam_size=2 span_index2 is
@@ -330,6 +351,7 @@ function decode_model:MMI(completed_history)
     return completed_history;
 end
 
+-- Entry point to run decoding.
 function decode_model:decode()
     local open_train_file = io.open(self.params.InputFile, "r")
     local open_write_file = io.open(self.params.OutputFile, "w")

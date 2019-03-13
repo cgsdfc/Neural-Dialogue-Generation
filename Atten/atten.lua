@@ -4,6 +4,7 @@ require 'cunn'
 require "nngraph"
 local stringx = require('pl.stringx')
 local tds = require('tds')
+
 cutorch.manualSeed(123)
 local model = {};
 model.Data = torch.reload("./data")
@@ -36,6 +37,7 @@ function model:Initial(params)
     end
 end
 
+-- Read a dictionary file in the standard format, store index, word pair in self.dict.
 function model:ReadDict()
     self.dict = tds.hash()
     local open = io.open(self.params.dictPath, "r")
@@ -55,6 +57,11 @@ function model:PrintMatrix(matrix)
     print("\n")
 end
 
+-- Given a vector of ids, turn it into a string of comma-separated words.
+-- OOV words are presented as a number, the id. If a 2D matrix passed in, it is flatten first.
+-- Example:
+-- [1, 2, 3] => "a cat sat"
+-- [[1, 2, 3]] => "a cat sat"
 function model:IndexToWord(vector)
     if vector:nDimension() == 2 then
         vector = torch.reshape(vector, vector:size(2));
@@ -62,8 +69,10 @@ function model:IndexToWord(vector)
     string = "";
     for i = 1, vector:size(1) do
         if self.dict[vector[i]] ~= nil then
+            -- In vocab
             string = string .. self.dict[vector[i]] .. " "
         else
+            -- Out of vocab
             string = string .. vector[i] .. " "
         end
     end
@@ -71,6 +80,7 @@ function model:IndexToWord(vector)
     return string
 end
 
+-- Make a copy of a Tensor up to 3D.
 function model:copy(A)
     local B;
     if A:nDimension() == 1 then
@@ -129,6 +139,9 @@ function model:attention()
     return nn.gModule(inputs, { output });
 end
 
+-- table.insert(table, pos, value) inserts value before pos.
+-- table.insert(table, value) append value to the end of table.
+
 function model:lstm_target_()
     local inputs = {}
     for ll = 1, self.params.layers do
@@ -137,6 +150,8 @@ function model:lstm_target_()
         local c_ll = nn.Identity()()
         table.insert(inputs, c_ll)
     end
+    -- now inputs is [h_ll, c_ll]
+
     local context, source_mask
     context = nn.Identity()()
     table.insert(inputs, context)
@@ -144,8 +159,10 @@ function model:lstm_target_()
     table.insert(inputs, x_)
     source_mask = nn.Identity()()
     table.insert(inputs, source_mask)
+    -- now inputs is [h_ll, c_ll, context, x_, source_mark]
+
     local outputs = {}
-    local LookupTable, input_word_embedding
+    -- local LookupTable, input_word_embedding
     for ll = 1, self.params.layers do
         local prev_h = inputs[ll * 2 - 1];
         local prev_c = inputs[ll * 2];
@@ -180,6 +197,7 @@ function model:lstm_target_()
         table.insert(outputs, next_h);
         table.insert(outputs, next_c);
     end
+
     local soft_atten = self:attention();
     soft_atten.name = 'soft_atten';
     local soft_vector = soft_atten({ outputs[self.params.layers * 2 - 1], context, source_mask });
