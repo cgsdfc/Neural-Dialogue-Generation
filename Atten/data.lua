@@ -1,7 +1,7 @@
 require "torchx"
 local stringx = require('pl.stringx')
 
-local Data = {}
+local Data = torch.class('Data')
 
 local function reverse(input)
     local length = input:size(2);
@@ -61,7 +61,7 @@ function Data:get_batch(Sequences, isSource)
 end
 
 
-function Data:Initial(params)
+function Data:__init(params)
     self.params = params;
     self.EOT = self.params.vocab_target; -- end of target
     self.EOS = self.params.vocab_target - 1; --end of source, you can think it as a buffer between source and target

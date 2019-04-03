@@ -88,11 +88,11 @@ function model:ReadFile(file)
 end
 
 function model:GetScore()
-    open_train = io.open(self.params.TrainingData)
+    local open_train = io.open(self.params.TrainingData)
     local current_lines = {}
     local all_lines = {}
     self.all_scores = torch.Tensor():cuda()
-    num = 0
+    local num = 0
     while true do
         local line = open_train:read("*line")
         if line == nil then break end
@@ -135,8 +135,8 @@ function model:Distill()
     for i = 1, torch.floor(self.params.total_lines * self.params.distill_rate) do
         remove_indexes[index[i]] = 1;
     end
-    num = 0;
-    open_train = io.open(self.params.TrainingData)
+    local num = 0;
+    local open_train = io.open(self.params.TrainingData)
     local four_distill_num = 0
     local cos_distill_num = 0
     while true do

@@ -2,11 +2,12 @@ require "cutorch"
 require "nn"
 require 'cunn'
 require "nngraph"
-local model = {};
-model.Data = torch.reload("./data")
 
-function model:Initial(params)
-    self.Data:Initial(params)
+local model = torch.class('model')
+model.Data = required('data')
+
+function model:__init(params)
+    self.Data:__init(params)
     self.params = params
     self.lstm_word = self:lstm_(true)
     self.lstm_sen = self:lstm_(false)

@@ -1,6 +1,6 @@
 require "torchx"
 local stringx = require('pl.stringx')
-local Data = {}
+local Data = torch.class('Data')
 
 local function split(str)
     local split = stringx.split(str, " ");
@@ -29,7 +29,7 @@ function Data:split(str)
     return tensor;
 end
 
-function Data:Initial(params)
+function Data:__init(params)
     self.params = params;
 end
 
