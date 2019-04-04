@@ -2,16 +2,23 @@ require "cutorch"
 require "nn"
 require "cunn"
 require "nngraph"
+require 'logroll'
 
 cutorch.manualSeed(123)
 
 local stringx = require('pl.stringx')
 local tds = require('tds')
 local Dataset = require("./Dataset")
-
 local AttenModel = torch.class('AttenModel')
 
+local function make_logger(file)
+    local plog = logroll.print_logger()
+    local flog = logroll.file_logger(file)
+    return logroll.combine(plog, flog)
+end
+
 function AttenModel:__init(params)
+    self.logger = make_logger(params.output_file)
     self.dataset = Dataset.new(params)
     self.params = params
 
@@ -33,10 +40,6 @@ function AttenModel:__init(params)
     self.Modules[#self.Modules + 1] = self.softmax
     self.store_s = {}
     self.store_t = {}
-
-    if self.params.saveModel then
-        self.output = io.open(self.params.output_file, "w")
-    end
 
     if self.params.dictPath ~= "" and self.params.dictPath ~= nil then
         self:ReadDict()
@@ -343,7 +346,8 @@ function AttenModel:model_forward()
 
         if self.Mask_s[t]:nDimension() ~= 0 then
             for i = 1, #output do
-                output[i]:indexCopy(1, self.Mask_s[t], torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
+                output[i]:indexCopy(1, self.Mask_s[t],
+                    torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
             end
         end
 
@@ -451,7 +455,8 @@ function AttenModel:model_backward()
             local now_d_input = self.lstms_t[t]:backward(now_input, d_store_t)
             if self.Mask_t[t]:nDimension() ~= 0 then
                 for i = 1, 2 * self.params.layers + 2 do
-                    now_d_input[i]:indexCopy(1, self.Mask_t[t], torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
+                    now_d_input[i]:indexCopy(1, self.Mask_t[t],
+                        torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
                 end
             end
 
@@ -481,7 +486,8 @@ function AttenModel:model_backward()
 
             if self.Mask_s[t]:nDimension() ~= 0 then
                 for i = 1, #d_now_output - 1 do
-                    d_now_output[i]:indexCopy(1, self.Mask_s[t], torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
+                    d_now_output[i]:indexCopy(1,
+                        self.Mask_s[t], torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
                 end
             end
 
@@ -497,8 +503,10 @@ end
 function AttenModel:test()
     local open_train_file
     if self.mode == "dev" then
+        self.logger.info('Using develop file')
         open_train_file = io.open(self.params.dev_file, "r")
     elseif self.mode == "test" then
+        self.logger.info('Using test file')
         open_train_file = io.open(self.params.test_file, "r")
     end
 
@@ -506,8 +514,8 @@ function AttenModel:test()
     local total_num_all = 0
     local End = 0
     while End == 0 do
-        End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t, self.Left_s, self.Left_t, self.Padding_s, self.Padding_t =
-        self.dataset:read_train(open_train_file)
+        End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t,
+        self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
 
         if #self.Word_s == 0 or End == 1 then
             break
@@ -527,10 +535,8 @@ function AttenModel:test()
     end
 
     open_train_file:close()
-    print("perplexity " .. 1 / torch.exp(-sum_err_all / total_num_all))
-    if self.output ~= nil then
-        self.output:write("standard perplexity " .. 1 / torch.exp(-sum_err_all / total_num_all) .. "\n")
-    end
+    local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
+    self.logger.info('standard perplexity: %f', ppl)
 end
 
 function AttenModel:update()
@@ -543,18 +549,14 @@ function AttenModel:update()
 
     local grad_norm = 0
     for i = 1, #self.Modules do
-        -- t=0
         local p, dp = self.Modules[i]:parameters()
         for j, m in pairs(dp) do
             m:mul(1 / self.Word_s:size(1))
             grad_norm = grad_norm + m:norm() ^ 2
-            --t=t+m:norm()^2
         end
-        -- print(i.." "..t)
     end
 
     grad_norm = grad_norm ^ 0.5
-    -- print(grad_norm.." grad_norm")
 
     if grad_norm > self.params.thres then
         lr = lr * self.params.thres / grad_norm
@@ -566,23 +568,29 @@ function AttenModel:update()
 end
 
 function AttenModel:save()
-    local params = {}
+    local weights = {}
     for i = 1, #self.Modules do
-        params[i] = self.Modules[i]:parameters()
+        weights[i] = self.Modules[i]:parameters()
     end
 
-    local file = torch.DiskFile(self.params.save_prefix .. self.iter, "w"):binary()
-    file:writeObject(params)
+    local filename = string.format('%s%d', self.params.save_prefix, self.iter)
+    self.logger.info('Saving module weights to %s', filename)
+
+    local file = torch.DiskFile(filename, "w"):binary()
+    file:writeObject(weights)
     file:close()
 end
 
 function AttenModel:saveParams()
-    local file = torch.DiskFile(self.params.save_params_file, "w"):binary()
+    local filename = self.params.save_params_file
+    self.logger.info('Saving model hyper parameters to %s', filename)
+    local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(self.params)
     file:close()
 end
 
 function AttenModel:readModel()
+    self.logger.info('loading model from %s', self.params.model_file)
     local file = torch.DiskFile(self.params.model_file, "r"):binary()
     local model_params = file:readObject()
     file:close()
@@ -593,7 +601,7 @@ function AttenModel:readModel()
             parameter[j]:copy(model_params[i][j])
         end
     end
-    print("read model done")
+    self.logger.info("read model done")
 end
 
 function AttenModel:clear()
@@ -604,7 +612,7 @@ end
 
 function AttenModel:train()
     if self.params.saveModel then
-        -- Save hparams
+        self.logger.info('Saving hyper parameters...')
         self:saveParams()
     end
 
@@ -613,22 +621,13 @@ function AttenModel:train()
     local start_halving = false
     self.lr = self.params.alpha
 
-    print("Epoch: " .. self.iter)
-    -- The initial testing.
+    self.logger.info('Initial testing...')
     self.mode = "test"
     self:test()
 
-    local batch_n = 0
     while true do
+        self.logger.info("Epoch: %d", self.iter)
         self.iter = self.iter + 1
-        print("Epoch: " .. self.iter)
-        local time_string = os.date("%c")
-        print(time_string)
-
-        if self.output ~= nil then
-            self.output:write(time_string .. "\n")
-            self.output:write("Epoch: " .. self.iter .. "\n")
-        end
 
         if self.params.start_halve ~= -1 then
             if self.iter > self.params.start_halve then
@@ -648,8 +647,9 @@ function AttenModel:train()
         while End == 0 do
             batch_n = batch_n + 1
             self:clear()
-            End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t, self.Left_s, self.Left_t, self.Padding_s, self.Padding_t =
-            self.dataset:read_train(open_train_file)
+            self.logger.info('loading training dataset %s', open_train_file)
+            End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t,
+            self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
             if End == 1 then
                 break
             end
@@ -665,32 +665,32 @@ function AttenModel:train()
                 self.Word_s = self.Word_s:cuda()
                 self.Word_t = self.Word_t:cuda()
                 self.Padding_s = self.Padding_s:cuda()
+
+                self.logger.info('Forward pass')
                 self:model_forward()
+                self.logger.info('Backward pass')
                 self:model_backward()
+                self.logger.info('Update pass')
                 self:update()
                 local time2 = timer:time().real
             end
         end
 
         open_train_file:close()
+        self.logger.info('Running validation test...')
         self.mode = "test"
         self:test()
-        -- Save weights.
         if self.params.saveModel then
             self:save()
         end
 
         local time2 = timer:time().real
-        print("Batch Time: ", time2 - time1)
+        self.logger.info("Batch Time: ", time2 - time1)
 
         if self.iter == self.params.max_iter then
-            print("Done training!")
+            self.logger.info("Done training!")
             break
         end
-    end
-
-    if self.output ~= nil then
-        self.output:close()
     end
 end
 
