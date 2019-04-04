@@ -57,7 +57,7 @@ end
 
 -- Load and restore self.MMI_model from saved model.
 function Decoder:LoadMMIModel()
-    logger.info('Using MMI. Loading MMI model...')
+    logger.info('Loading MMI model...')
 
     local filename = self.params.MMI_params_file
     logger.info('Loading params for MMI model from %s', filename)
@@ -359,13 +359,13 @@ function Decoder:decode_BS()
     end
 
     if self.params.MMI then
-        completed_history = self:MMI(completed_history)
+        completed_history = self:MMIRerank(completed_history)
     end
     return completed_history
 end
 
 
-function Decoder:MMI(completed_history)
+function Decoder:MMIRerank(completed_history)
     local MMI_source = {}
     local MMI_target = {}
     local length = {}
@@ -396,10 +396,10 @@ function Decoder:MMI(completed_history)
         end
 
         self.MMI_model.Word_s, self.MMI_model.Mask_s,
-        self.MMI_model.Left_s, self.MMI_model.Padding_s = self.MMI_model.Data:get_batch(self.MMI_model.source, true)
+        self.MMI_model.Left_s, self.MMI_model.Padding_s = self.MMI_model.dataset:get_batch(self.MMI_model.source, true)
 
         self.MMI_model.Word_t, self.MMI_model.Mask_t,
-        self.MMI_model.Left_t, self.MMI_model.Padding_t = self.MMI_model.Data:get_batch(self.MMI_model.target, false)
+        self.MMI_model.Left_t, self.MMI_model.Padding_t = self.MMI_model.dataset:get_batch(self.MMI_model.target, false)
 
         self.MMI_model.mode = "test"
         self.MMI_model:model_forward()
@@ -423,8 +423,16 @@ end
 
 -- Entry point to run decoding.
 function Decoder:decode()
+
+
     logger.info('InputFile: %s', self.params.InputFile)
     logger.info('OutputFile: %s', self.params.OutputFile)
+
+    local output_dir = paths.dirname(self.params.OutputFile)
+    if not path.isdir(output_dir) then
+        paths.mkdir(output_dir)
+        logger.info('mkdir %s', output_dir)
+    end
 
     local open_train_file = assert(io.open(self.params.InputFile, "r"))
     local open_write_file = assert(io.open(self.params.OutputFile, "w"))
@@ -437,7 +445,7 @@ function Decoder:decode()
     while End == 0 do
         local time1 = timer:time().real
 
-        logger.info('loading InputFile...')
+        logger.info('loading Dataset...')
         End, self.Word_s, self.Word_t, self.Mask_s,
         self.Mask_t, self.Left_s, self.Left_t, self.Padding_s,
         self.Padding_t, self.Source, self.Target = self.dataset:read_train(open_train_file)
@@ -471,20 +479,22 @@ function Decoder:decode()
             completed_history = self:decode_BS()
         end
 
-        self:OutPut(completed_history, open_write_file, batch_n)
+        logger.info('writing OutputFile...')
+        self:Output(completed_history, open_write_file, batch_n)
         assert(self.params.setting ~= nil)
         local time2 = timer:time().real
-        print(time2 - time1)
+        logger.info('Spent %f seconds', time2 - time1)
         if End == 1 then
             break
         end
     end
 
     open_write_file:close()
+    logger.info('Decoding done.')
 end
 
 -- Output the sampled sentences.
-function Decoder:OutPut(completed_history, open_write_file, batch_n)
+function Decoder:Output(completed_history, open_write_file, batch_n)
     if self.params.setting == "sampling" or self.params.setting == "StochasticGreedy" then
         for i = 1, self.Word_s:size(1) do
             if self.params.output_source_target_side_by_side then
@@ -585,7 +595,7 @@ function Decoder:DecodeIllustrationSample(open_write_file)
     else
         completed_history = self:decode_BS()
     end
-    self:OutPut(completed_history, open_write_file)
+    self:Output(completed_history, open_write_file)
 end
 
 return Decoder

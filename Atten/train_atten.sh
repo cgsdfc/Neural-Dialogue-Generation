@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Test training of the attention model.
+
 IMAGE=kaixhin/cuda-torch-mega:8.0
 PROJECT_ROOT=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation
 SAVE_FOLDER=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation/save/test

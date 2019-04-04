@@ -592,7 +592,7 @@ function AttenModel:saveParams()
 end
 
 function AttenModel:readModel()
-    logger.info('loading model from %s', self.params.model_file)
+    logger.info('loading model weights from %s', self.params.model_file)
     local file = torch.DiskFile(self.params.model_file, "r"):binary()
     local model_params = file:readObject()
     file:close()
