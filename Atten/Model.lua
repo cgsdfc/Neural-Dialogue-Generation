@@ -1,18 +1,18 @@
 require "cutorch"
 require "nn"
-require 'cunn'
+require "cunn"
 require "nngraph"
 
 cutorch.manualSeed(123)
 
 local stringx = require('pl.stringx')
 local tds = require('tds')
+local Dataset = require("./Dataset")
 
-local model = torch.class('model')
-model.Data = require("./data")
+local AttenModel = torch.class('AttenModel')
 
-function model:__init(params)
-    self.Data:__init(params)
+function AttenModel:__init(params)
+    self.dataset = Dataset.new(params)
     self.params = params
 
     self.lstm_source = self:lstm_source_()
@@ -44,7 +44,7 @@ function model:__init(params)
 end
 
 -- Read a dictionary file in the standard format, store index, word pair in self.dict.
-function model:ReadDict()
+function AttenModel:ReadDict()
     self.dict = tds.hash()
     local open = io.open(self.params.dictPath, "r")
     index = 0
@@ -56,7 +56,7 @@ function model:ReadDict()
     end
 end
 
-function model:PrintMatrix(matrix)
+function AttenModel:PrintMatrix(matrix)
     for i = 1, matrix:size(1) do
         print(self:IndexToWord(matrix[i]))
     end
@@ -68,7 +68,7 @@ end
 -- Example:
 -- [1, 2, 3] => "a cat sat"
 -- [[1, 2, 3]] => "a cat sat"
-function model:IndexToWord(vector)
+function AttenModel:IndexToWord(vector)
     if vector:nDimension() == 2 then
         vector = torch.reshape(vector, vector:size(2))
     end
@@ -87,7 +87,7 @@ function model:IndexToWord(vector)
 end
 
 -- Make a copy of a Tensor up to 3D.
-function model:copy(A)
+function AttenModel:copy(A)
     local B
     if A:nDimension() == 1 then
         B = torch.Tensor(A:size(1)):cuda()
@@ -102,7 +102,7 @@ function model:copy(A)
     return B
 end
 
-function model:clone_(A)
+function AttenModel:clone_(A)
     B = {}
     for i = 1, #A do
         if A[i]:nDimension() == 2 then
@@ -115,7 +115,7 @@ function model:clone_(A)
     return B
 end
 
-function model:g_cloneManyTimes(net, T)
+function AttenModel:g_cloneManyTimes(net, T)
     local clones = {}
     for t = 1, T do
         clones[t] = net:clone('weight', 'bias', 'gradWeight', 'gradBias')
@@ -123,7 +123,7 @@ function model:g_cloneManyTimes(net, T)
     return clones
 end
 
-function model:attention()
+function AttenModel:attention()
     local inputs = {}
     local target_t = nn.Identity()()
     local context = nn.Identity()()
@@ -152,7 +152,7 @@ end
 -- table.insert(table, pos, value) inserts value before pos.
 -- table.insert(table, value) append value to the end of table.
 
-function model:lstm_target_()
+function AttenModel:lstm_target_()
     local inputs = {}
     for ll = 1, self.params.layers do
         local h_ll = nn.Identity()()
@@ -225,7 +225,7 @@ function model:lstm_target_()
     return module:cuda()
 end
 
-function model:SentencePpl()
+function AttenModel:SentencePpl()
     self.mode = "test"
     local score = torch.Tensor(self.Word_s:size(1)):fill(0):cuda()
     local num = torch.Tensor(self.Word_s:size(1)):fill(0):cuda()
@@ -248,14 +248,14 @@ function model:SentencePpl()
     return score
 end
 
-function model:softmax_()
+function AttenModel:softmax_()
     local y = nn.Identity()()
     local h = nn.Identity()()
     local h2y = nn.Linear(self.params.dimension, self.params.vocab_target):noBias()(h)
     local pred = nn.LogSoftMax()(h2y)
     local w = torch.ones(self.params.vocab_target)
 
-    w[self.Data.target_dummy] = 0
+    w[self.dataset.target_dummy] = 0
     local Criterion = nn.ClassNLLCriterion(w)
     Criterion.sizeAverage = false
     local err = Criterion({ pred, y })
@@ -265,26 +265,29 @@ function model:softmax_()
     return module:cuda()
 end
 
-function model:lstm_source_()
+function AttenModel:lstm_source_()
     local inputs = {}
     for ll = 1, self.params.layers do
         table.insert(inputs, nn.Identity()())
         table.insert(inputs, nn.Identity()())
     end
+
     table.insert(inputs, nn.Identity()())
     local outputs = {}
+
     for ll = 1, self.params.layers do
         local prev_h = inputs[ll * 2 - 1]
         local prev_c = inputs[ll * 2]
         if ll == 1 then
-            x = nn.LookupTable(self.params.vocab_source, self.params.dimension)(inputs[#inputs])
-        else x = outputs[(ll - 1) * 2 - 1]
+            local x = nn.LookupTable(self.params.vocab_source, self.params.dimension)(inputs[#inputs])
+        else
+            local x = outputs[(ll - 1) * 2 - 1]
         end
+
         local drop_x = nn.Dropout(self.params.dropout)(x)
         local drop_h = nn.Dropout(self.params.dropout)(inputs[ll * 2 - 1])
         local i2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_x)
-        local h2h
-        h2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_h)
+        local h2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_h)
         local gates = nn.CAddTable()({ i2h, h2h })
         local reshaped_gates = nn.Reshape(4, self.params.dimension)(gates)
         local sliced_gates = nn.SplitTable(2)(reshaped_gates)
@@ -296,15 +299,17 @@ function model:lstm_source_()
         local l2 = nn.CMulTable()({ in_gate, in_transform })
         local next_c = nn.CAddTable()({ l1, l2 })
         local next_h = nn.CMulTable()({ out_gate, nn.Tanh()(next_c) })
+
         table.insert(outputs, next_h)
         table.insert(outputs, next_c)
     end
+
     local module = nn.gModule(inputs, outputs)
     module:getParameters():uniform(-self.params.init_weight, self.params.init_weight)
     return module:cuda()
 end
 
-function model:model_forward()
+function AttenModel:model_forward()
     self.context = torch.Tensor(self.Word_s:size(1), self.Word_s:size(2), self.params.dimension):cuda()
     self.target_embedding = {}
     self.softmax_h = {}
@@ -325,7 +330,7 @@ function model:model_forward()
             else input = self:clone_(output)
             end
         end
-        
+
         table.insert(input, self.Word_s:select(2, t))
         if self.mode == "train" then
             self.lstms_s[t]:training()
@@ -333,23 +338,23 @@ function model:model_forward()
         else self.lstms_s[1]:evaluate()
             output = self.lstms_s[1]:forward(input)
         end
-        
+
         if self.Mask_s[t]:nDimension() ~= 0 then
             for i = 1, #output do
                 output[i]:indexCopy(1, self.Mask_s[t], torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
             end
         end
-        
+
         if self.mode == "train" then
             self.store_s[t] = self:clone_(output)
         elseif t == self.Word_s:size(2) then
             self.last = output
         end
-        
+
         self.SourceVector = output[self.params.layers * 2 - 1]
         self.context[{ {}, t }]:copy(output[2 * self.params.layers - 1])
     end
-    
+
     if self.mode ~= "decoding" then
         for t = 1, self.Word_t:size(2) - 1 do
             local lstm_input = {}
@@ -367,88 +372,87 @@ function model:model_forward()
                     end
                 end
             end
-            
+
             table.insert(lstm_input, self.context)
             table.insert(lstm_input, self.Word_t:select(2, t))
             table.insert(lstm_input, self.Padding_s)
-            
+
             if self.params.speakerSetting == "speaker" or self.params.speakerSetting == "speaker_addressee" then
                 table.insert(lstm_input, self.SpeakerID)
             end
             if self.params.speakerSetting == "speaker_addressee" then
                 table.insert(lstm_input, self.AddresseeID)
             end
-            
+
             if self.mode == "train" then
                 self.lstms_t[t]:training()
                 output = self.lstms_t[t]:forward(lstm_input)
             else self.lstms_t[1]:evaluate()
                 output = self.lstms_t[1]:forward(lstm_input)
             end
-            
+
             if self.Mask_t[t]:nDimension() ~= 0 then
                 for i = 1, #output do
-                    output[i]:indexCopy(1, self.Mask_t[t], torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
+                    output[i]:indexCopy(1, self.Mask_t[t],
+                        torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
                 end
             end
-            
+
             self.store_t[t] = {}
             for i = 1, #output - 1 do
                 self.store_t[t][i] = self:copy(output[i])
             end
-            
+
             self.softmax_h[t] = self:copy(output[#output])
         end
     end
 end
 
-function model:model_backward()
+function AttenModel:model_backward()
     local d_source = torch.zeros(self.context:size(1), self.context:size(2), self.context:size(3)):cuda()
     local d_output = {}
-    
+
     for ll = 1, self.params.layers do
         table.insert(d_output, torch.zeros(self.Word_s:size(1), self.params.dimension):cuda())
         table.insert(d_output, torch.zeros(self.Word_s:size(1), self.params.dimension):cuda())
     end
-    
+
     local sum_err = 0
     local total_num = 0
-    
+
     for t = self.Word_t:size(2) - 1, 1, -1 do
         local current_word = self.Word_t:select(2, t + 1)
         local softmax_output = self.softmax:forward({ self.softmax_h[t], current_word })
         local err = softmax_output[1]
-        
+
         sum_err = sum_err + err[1]
         total_num = total_num + self.Left_t[t + 1]:size(1)
-        
+
         if self.mode == "train" then
-            local dh = self.softmax:backward(
-                { self.softmax_h[t], current_word },
-                { torch.Tensor({ 1 }), torch.Tensor(softmax_output[2]:size()):fill(0):cuda() }
-            )
-            
-            d_store_t = self:clone_(d_output)
+            local dh = self.softmax:backward({ self.softmax_h[t], current_word },
+                { torch.Tensor({ 1 }), torch.Tensor(softmax_output[2]:size()):fill(0):cuda() })
+
+            local d_store_t = self:clone_(d_output)
             table.insert(d_store_t, dh[1])
-            
+
             local now_input = {}
             if t ~= 1 then
                 now_input = self:clone_(self.store_t[t - 1])
             else
                 now_input = self:clone_(self.store_s[self.Word_s:size(2)])
             end
-            
+
             table.insert(now_input, self.context)
             table.insert(now_input, self.Word_t:select(2, t))
             table.insert(now_input, self.Padding_s)
-            
+
             local now_d_input = self.lstms_t[t]:backward(now_input, d_store_t)
             if self.Mask_t[t]:nDimension() ~= 0 then
                 for i = 1, 2 * self.params.layers + 2 do
                     now_d_input[i]:indexCopy(1, self.Mask_t[t], torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
                 end
             end
-            
+
             d_output = {}
             for i = 1, 2 * self.params.layers do
                 d_output[i] = self:copy(now_d_input[i])
@@ -456,7 +460,7 @@ function model:model_backward()
             d_source:add(now_d_input[2 * self.params.layers + 1])
         end
     end
-    
+
     if self.mode == "train" then
         for t = self.Word_s:size(2), 1, -1 do
             local now_input = {}
@@ -468,17 +472,17 @@ function model:model_backward()
                     table.insert(now_input, torch.zeros(self.Word_s:size(1), self.params.dimension):cuda())
                 end
             end
-            
+
             table.insert(now_input, self.Word_s:select(2, t))
             d_output[2 * self.params.layers - 1]:add(d_source[{ {}, t, {} }])
             local d_now_output = self.lstms_s[t]:backward(now_input, d_output)
-            
+
             if self.Mask_s[t]:nDimension() ~= 0 then
                 for i = 1, #d_now_output - 1 do
                     d_now_output[i]:indexCopy(1, self.Mask_s[t], torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
                 end
             end
-            
+
             d_output = {}
             for i = 1, 2 * self.params.layers do
                 d_output[i] = self:copy(d_now_output[i])
@@ -488,26 +492,27 @@ function model:model_backward()
     return sum_err, total_num
 end
 
-function model:test()
+function AttenModel:test()
     local open_train_file
     if self.mode == "dev" then
         open_train_file = io.open(self.params.dev_file, "r")
     elseif self.mode == "test" then
         open_train_file = io.open(self.params.test_file, "r")
     end
-    
+
     local sum_err_all = 0
     local total_num_all = 0
     local End = 0
     while End == 0 do
         End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t, self.Left_s, self.Left_t, self.Padding_s, self.Padding_t =
-        self.Data:read_train(open_train_file)
-        
+        self.dataset:read_train(open_train_file)
+
         if #self.Word_s == 0 or End == 1 then
             break
         end
-        
-        if (self.Word_s:size(2) < self.params.source_max_length and self.Word_t:size(2) < self.params.target_max_length) then
+
+        if (self.Word_s:size(2) < self.params.source_max_length and
+                self.Word_t:size(2) < self.params.target_max_length) then
             self.mode = "test"
             self.Word_s = self.Word_s:cuda()
             self.Word_t = self.Word_t:cuda()
@@ -518,7 +523,7 @@ function model:test()
             total_num_all = total_num_all + total_num
         end
     end
-    
+
     open_train_file:close()
     print("perplexity " .. 1 / torch.exp(-sum_err_all / total_num_all))
     if self.output ~= nil then
@@ -526,7 +531,7 @@ function model:test()
     end
 end
 
-function model:update()
+function AttenModel:update()
     local lr
     if self.lr ~= nil then
         lr = self.lr
@@ -558,7 +563,7 @@ function model:update()
     end
 end
 
-function model:save()
+function AttenModel:save()
     local params = {}
     for i = 1, #self.Modules do
         params[i], _ = self.Modules[i]:parameters()
@@ -569,13 +574,13 @@ function model:save()
     file:close()
 end
 
-function model:saveParams()
+function AttenModel:saveParams()
     local file = torch.DiskFile(self.params.save_params_file, "w"):binary()
     file:writeObject(self.params)
     file:close()
 end
 
-function model:readModel()
+function AttenModel:readModel()
     local file = torch.DiskFile(self.params.model_file, "r"):binary()
     local model_params = file:readObject()
     file:close()
@@ -589,13 +594,13 @@ function model:readModel()
     print("read model done")
 end
 
-function model:clear()
+function AttenModel:clear()
     for i = 1, #self.Modules do
         self.Modules[i]:zeroGradParameters()
     end
 end
 
-function model:train()
+function AttenModel:train()
     if self.params.saveModel then
         -- Save hparams
         self:saveParams()
@@ -642,7 +647,7 @@ function model:train()
             batch_n = batch_n + 1
             self:clear()
             End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t, self.Left_s, self.Left_t, self.Padding_s, self.Padding_t =
-            self.Data:read_train(open_train_file)
+            self.dataset:read_train(open_train_file)
             if End == 1 then
                 break
             end
@@ -687,4 +692,4 @@ function model:train()
     end
 end
 
-return model
+return AttenModel

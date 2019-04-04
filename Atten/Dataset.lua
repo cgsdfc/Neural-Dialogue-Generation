@@ -1,10 +1,10 @@
 require "torchx"
 local stringx = require('pl.stringx')
 
-local Data = torch.class('Data')
+local Dataset = torch.class('Dataset')
 
 
-function Data:__init(params)
+function Dataset:__init(params)
     self.params = params
     self.EOT = self.params.vocab_target -- end of target
 
@@ -24,7 +24,7 @@ local function reverse(input)
     return output
 end
 
-function Data:split(str)
+function Dataset:split(str)
     local split = stringx.split(str, " ")
     local tensor = torch.Tensor(1, #split):zero()
     local count = 0
@@ -38,7 +38,7 @@ function Data:split(str)
 end
 
 
-function Data:get_batch(Sequences, isSource)
+function Dataset:get_batch(Sequences, isSource)
     local max_length = -100
     local Words, Padding, Mask, Left
     for i = 1, #Sequences do
@@ -78,7 +78,7 @@ function Data:get_batch(Sequences, isSource)
 end
 
 
-function Data:read_train(open_train_file)
+function Dataset:read_train(open_train_file)
     local Y = {}
     local Source = {}
     local Target = {}
@@ -121,4 +121,4 @@ function Data:read_train(open_train_file)
     return End, Words_s, Words_t, Masks_s, Masks_t, Left_s, Left_t, Padding_s, Padding_t, Source, Target
 end
 
-return Data
+return Dataset

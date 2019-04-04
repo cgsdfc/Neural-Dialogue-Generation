@@ -2,19 +2,18 @@ require "torch"
 require "cunn"
 require "cutorch"
 require "nngraph"
+require 'logroll'
 
--- reload: unload a module and re-require it
-local function reload(mod, ...)
-    package.loaded[mod] = nil
-    return require(mod, ...)
-end
-
--- Parse command line.
-local params = reload("./parse")
--- Create a model.
-local model = reload("./atten");
+local parse_args = require('./parse')
+local AttenModel = require("./Model")
+local logger = logroll.print_logger()
+local params = parse_args()
 
 cutorch.manualSeed(123)
+
+logger.info('Using GPU %d', params.gpu_index)
 cutorch.setDevice(params.gpu_index)
-model:Initial(params)
+
+local model = AttenModel.new(params)
+
 model:train()
