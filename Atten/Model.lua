@@ -368,12 +368,14 @@ function AttenModel:model_forward()
             if t == 1 then
                 if self.mode == "train" then
                     lstm_input = self:clone_(self.store_s[self.Word_s:size(2)])
-                else lstm_input = output
+                else
+                    lstm_input = output
                 end
             else
                 if self.mode == "train" then
                     lstm_input = self:clone_(self.store_t[t - 1])
-                else lstm_input = {}
+                else
+                    lstm_input = {}
                     for i = 1, 2 * self.params.layers do
                         lstm_input[i] = output[i]
                     end
@@ -384,7 +386,9 @@ function AttenModel:model_forward()
             table.insert(lstm_input, self.Word_t:select(2, t))
             table.insert(lstm_input, self.Padding_s)
 
-            if self.params.speakerSetting == "speaker" or self.params.speakerSetting == "speaker_addressee" then
+            -- For Persona, absent key result in nil in Lua.
+            if self.params.speakerSetting == "speaker" or
+                    self.params.speakerSetting == "speaker_addressee" then
                 table.insert(lstm_input, self.SpeakerID)
             end
             if self.params.speakerSetting == "speaker_addressee" then
@@ -394,7 +398,9 @@ function AttenModel:model_forward()
             if self.mode == "train" then
                 self.lstms_t[t]:training()
                 output = self.lstms_t[t]:forward(lstm_input)
-            else self.lstms_t[1]:evaluate()
+            else
+                self.lstms_t[1]:evaluate()
+                logger.debug(lstm_input)
                 output = self.lstms_t[1]:forward(lstm_input)
             end
 
@@ -501,45 +507,6 @@ function AttenModel:model_backward()
     return sum_err, total_num
 end
 
-function AttenModel:test()
-    local open_train_file
-    if self.mode == "dev" then
-        logger.info('Using develop file')
-        open_train_file= assert(io.open(self.params.dev_file, "r"), 'cannot open file')
-    elseif self.mode == "test" then
-        logger.info('Using test file')
-        open_train_file= assert(io.open(self.params.test_file, "r"), 'cannot open file')
-    end
-
-    local sum_err_all = 0
-    local total_num_all = 0
-    local End = 0
-    while End == 0 do
-        End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t,
-        self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
-
-        if #self.Word_s == 0 or End == 1 then
-            break
-        end
-
-        if (self.Word_s:size(2) < self.params.source_max_length and
-                self.Word_t:size(2) < self.params.target_max_length) then
-            self.mode = "test"
-            self.Word_s = self.Word_s:cuda()
-            self.Word_t = self.Word_t:cuda()
-            self.Padding_s = self.Padding_s:cuda()
-            self:model_forward()
-            local sum_err, total_num = self:model_backward()
-            sum_err_all = sum_err_all + sum_err
-            total_num_all = total_num_all + total_num
-        end
-    end
-
-    open_train_file:close()
-    local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
-    logger.info('standard perplexity: %f', ppl)
-end
-
 function AttenModel:update()
     local lr
     if self.lr ~= nil then
@@ -612,6 +579,48 @@ function AttenModel:clear()
     end
 end
 
+
+function AttenModel:test()
+    local open_train_file
+    if self.mode == "dev" then
+        logger.info('Using develop file')
+        open_train_file = assert(io.open(self.params.dev_file, "r"), 'cannot open file')
+    elseif self.mode == "test" then
+        logger.info('Using test file')
+        open_train_file = assert(io.open(self.params.test_file, "r"), 'cannot open file')
+    end
+
+    local sum_err_all = 0
+    local total_num_all = 0
+    local End = 0
+    while End == 0 do
+        End, self.Word_s, self.Word_t,
+        self.Mask_s, self.Mask_t,
+        self.Left_s, self.Left_t,
+        self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
+
+        if #self.Word_s == 0 or End == 1 then
+            break
+        end
+
+        if (self.Word_s:size(2) < self.params.source_max_length and
+                self.Word_t:size(2) < self.params.target_max_length) then
+            self.mode = "test"
+            self.Word_s = self.Word_s:cuda()
+            self.Word_t = self.Word_t:cuda()
+            self.Padding_s = self.Padding_s:cuda()
+            self:model_forward()
+            local sum_err, total_num = self:model_backward()
+            sum_err_all = sum_err_all + sum_err
+            total_num_all = total_num_all + total_num
+        end
+    end
+
+    open_train_file:close()
+    local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
+    logger.info('standard perplexity: %f', ppl)
+end
+
 function AttenModel:train()
     if self.params.saveModel then
         logger.info('Saving hyper parameters...')
@@ -640,7 +649,7 @@ function AttenModel:train()
             self.lr = self.lr * 0.5
         end
 
-        local open_train_file= assert(io.open(self.params.train_file, "r"), 'cannot open file')
+        local open_train_file = assert(io.open(self.params.train_file, "r"), 'cannot open file')
         local End, Word_s, Word_t, Mask_s, Mask_t
         local End = 0
         local batch_n = 1

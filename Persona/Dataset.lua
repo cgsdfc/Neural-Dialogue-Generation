@@ -1,15 +1,18 @@
--- Extanding Atten/Dataset
+require 'logroll'
 require 'Atten/Dataset'
 
-local PersonaDataset = torch.class('PersonaData', 'Dataset')
+local logger = logroll.print_logger()
+local PersonaDataset = torch.class('PersonaDataset', 'Dataset')
 
+-- Read a single line from open_train_file.
+-- End == 1 when EOF is reached.
 function PersonaDataset:read_train(open_train_file)
     local Source = {}
     local Target = {}
     local i = 0
     local End = 0
     local SpeakerID
-    local AddresseeID
+    local AddresseeID -- This is optional
 
     while 1 == 1 do
         i = i + 1
@@ -21,6 +24,7 @@ function PersonaDataset:read_train(open_train_file)
 
         local two_strings = stringx.split(str, "|")
         assert(self.params.reverse ~= nil)
+
         local addressee_line, addressee_id
         if self.params.speakerSetting == "speaker_addressee" then
             local space = two_strings[1]:find(" ")
@@ -74,15 +78,27 @@ function PersonaDataset:read_train(open_train_file)
             break
         end
     end
+
     if End == 1 then
         return End, {}, {}, {}, {}, {}, {}
     end
 
     local Words_s, Masks_s, Left_s, Padding_s = self:get_batch(Source, true)
     local Words_t, Masks_t, Left_t, Padding_t = self:get_batch(Target, false)
-    AddresseeID = AddresseeID:cuda()
+
+    if AddresseeID then -- Optional
+        AddresseeID = AddresseeID:cuda()
+    end
+
+    assert(SpeakerID, 'SpeakerID must be non-nil!')
     SpeakerID = SpeakerID:cuda()
-    return End, Words_s, Words_t, Masks_s, Masks_t, Left_s, Left_t, Padding_s, Padding_t, Source, Target, SpeakerID, AddresseeID
+
+    return End, Words_s, Words_t,
+    Masks_s, Masks_t,
+    Left_s, Left_t,
+    Padding_s, Padding_t,
+    Source, Target,
+    SpeakerID, AddresseeID
 end
 
 return PersonaDataset

@@ -1,10 +1,18 @@
 require 'logroll'
 require 'Atten/Model'
 
+local PersonaDataset = require('Persona/Dataset')
+local PersonaModel, AttenModel = torch.class('PersonaModel', 'AttenModel')
 local logger = logroll.print_logger()
-local PersonaModel = torch.class('PersonaModel', 'AttenModel')
 
 
+function PersonaModel:__init(params)
+    AttenModel.__init(self, params)
+    -- Replace dataset with our special version.
+    self.dataset = PersonaDataset.new(params)
+end
+
+-- Decoder RNN
 function PersonaModel:lstm_target_()
     local inputs = {}
     for ll = 1, self.params.layers do
@@ -43,10 +51,12 @@ function PersonaModel:lstm_target_()
         if ll == 1 then
             local atten_feed = self:attention()
             atten_feed.name = 'atten_feed'
+
             local context1 = atten_feed({ inputs[self.params.layers * 2 - 1], context, source_mask })
             local drop_f = nn.Dropout(self.params.dropout)(context1)
             local f2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_f)
             gates = nn.CAddTable()({ nn.CAddTable()({ i2h, h2h }), f2h })
+
             local speaker_index = nn.Identity()()
             table.insert(inputs, speaker_index)
             local speaker_v = nn.LookupTable(self.params.SpeakerNum, self.params.dimension)(speaker_index)
@@ -57,6 +67,7 @@ function PersonaModel:lstm_target_()
                 local addressee_index = nn.Identity()()
                 table.insert(inputs, addressee_index)
                 local addressee_v = nn.LookupTable(self.params.AddresseeNum, self.params.dimension)(addressee_index)
+
                 addressee_v = nn.Dropout(self.params.dropout)(addressee_v)
                 local h1 = nn.Linear(self.params.dimension, self.params.dimension)(speaker_v)
                 local h2 = nn.Linear(self.params.dimension, self.params.dimension)(addressee_v)
@@ -95,6 +106,47 @@ function PersonaModel:lstm_target_()
     return module:cuda()
 end
 
+function PersonaModel:test()
+    local open_train_file
+    if self.mode == "dev" then
+        open_train_file = assert(io.open(self.params.dev_file, "r"), 'cannot open file')
+    elseif self.mode == "test" then
+        open_train_file = assert(io.open(self.params.test_file, "r"), 'cannot open file')
+    end
+
+    local sum_err_all = 0
+    local total_num_all = 0
+    local End = 0
+
+    while End == 0 do
+        End, self.Word_s, self.Word_t,
+        self.Mask_s, self.Mask_t, self.Left_s,
+        self.Left_t, self.Padding_s, self.Padding_t,
+        self.Source, self.Target,
+        self.SpeakerID, self.AddresseeID = self.dataset:read_train(open_train_file)
+
+        if #self.Word_s == 0 or End == 1 then
+            break
+        end
+
+        if (self.Word_s:size(2) < self.params.source_max_length and
+                self.Word_t:size(2) < self.params.target_max_length) then
+            self.mode = "test"
+            self.Word_s = self.Word_s:cuda()
+            self.Word_t = self.Word_t:cuda()
+            self.Padding_s = self.Padding_s:cuda()
+            self:model_forward()
+            local sum_err, total_num = self:model_backward()
+            sum_err_all = sum_err_all + sum_err
+            total_num_all = total_num_all + total_num
+        end
+    end
+
+    open_train_file:close()
+    local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
+    logger.info('Standard PPL: %f', ppl)
+end
+
 function PersonaModel:train()
     if self.params.saveModel then
         self:saveParams()
@@ -105,14 +157,12 @@ function PersonaModel:train()
     local start_halving = false
     self.lr = self.params.alpha
 
-    logger.info('Epoch: %d', self.iter)
     self.mode = "test"
     self:test()
 
     while true do
-        self.iter = self.iter + 1
         logger.info('Epoch: %d', self.iter)
-        logger.info(os.date("%c"))
+        self.iter = self.iter + 1
 
         if self.params.start_halve ~= -1 then
             if self.iter > self.params.start_halve then
@@ -164,52 +214,11 @@ function PersonaModel:train()
         end
 
         local time2 = timer:time().real
-        logger.info(time2 - time1)
+        logger.info('Spent Time: %f', time2 - time1)
         if self.iter == self.params.max_iter then
             break
         end
     end
-end
-
-function PersonaModel:test()
-    local open_train_file
-    if self.mode == "dev" then
-        open_train_file = assert(io.open(self.params.dev_file, "r"), 'cannot open file')
-    elseif self.mode == "test" then
-        open_train_file = assert(io.open(self.params.test_file, "r"), 'cannot open file')
-    end
-
-    local sum_err_all = 0
-    local total_num_all = 0
-    local End = 0
-
-    while End == 0 do
-        End, self.Word_s, self.Word_t,
-        self.Mask_s, self.Mask_t, self.Left_s,
-        self.Left_t, self.Padding_s, self.Padding_t,
-        self.Source, self.Target,
-        self.SpeakerID, self.AddresseeID = self.dataset:read_train(open_train_file)
-
-        if #self.Word_s == 0 or End == 1 then
-            break
-        end
-
-        if (self.Word_s:size(2) < self.params.source_max_length and
-                self.Word_t:size(2) < self.params.target_max_length) then
-            self.mode = "test"
-            self.Word_s = self.Word_s:cuda()
-            self.Word_t = self.Word_t:cuda()
-            self.Padding_s = self.Padding_s:cuda()
-            self:model_forward()
-            local sum_err, total_num = self:model_backward()
-            sum_err_all = sum_err_all + sum_err
-            total_num_all = total_num_all + total_num
-        end
-    end
-
-    open_train_file:close()
-    local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
-    logger.info('Standard PPL: %f', ppl)
 end
 
 return PersonaModel

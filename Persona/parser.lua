@@ -9,9 +9,10 @@ local function parse_args()
     cmd:option("-dropout", 0.2, "dropout rate")
 
     cmd:option("-dictPath", "./data/movie_25000", "dictionary file")
-    cmd:option("-train_file", "./data/t_given_s_train.txt", "training file")
-    cmd:option("-dev_file", "./data/t_given_s_dev.txt", "develop file")
-    cmd:option("-test_file", "./data/t_given_s_test.txt", "test file")
+    -- note the default files are different from Atten.
+    cmd:option("-train_file", "./data/speaker_addressee_train.txt", "training file")
+    cmd:option("-dev_file", "./data/speaker_addressee_dev.txt", "develop file")
+    cmd:option("-test_file", "./data/speaker_addressee_test.txt", "test file")
 
     cmd:option("-init_weight", 0.1, "")
     cmd:option("-alpha", 1, "")
@@ -50,6 +51,20 @@ local function parse_args()
     if not path.isdir(params.saveFolder) then
         paths.mkdir(params.saveFolder)
     end
+
+    local files_to_check = {
+        'train_file',
+        'dev_file',
+        'test_file',
+        'dictPath',
+    }
+
+    for _, file in ipairs(files_to_check) do
+        if not path.isfile(params[file]) then
+            error(string.format('%s %s does not exist', file, params[file]))
+        end
+    end
+    logger.info('all required files exist.')
 
     print(params)
     return params

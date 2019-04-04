@@ -23,6 +23,8 @@ local function reverse(input)
     return output
 end
 
+-- Split a string of ids. Return a Tensor from it.
+-- Example: input = "1 2 3"; output == Tensor[1, 2, 3]
 function Dataset:split(str)
     local split = stringx.split(str, " ")
     local tensor = torch.Tensor(1, #split):zero()
