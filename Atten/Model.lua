@@ -582,6 +582,7 @@ function AttenModel:save()
 end
 
 function AttenModel:saveParams()
+    self.logger.info(self.params)
     local filename = self.params.save_params_file
     self.logger.info('Saving model hyper parameters to %s', filename)
     local file = torch.DiskFile(filename, "w"):binary()
@@ -685,7 +686,7 @@ function AttenModel:train()
         end
 
         local time2 = timer:time().real
-        self.logger.info("Batch Time: ", time2 - time1)
+        self.logger.info("Batch Time: %f", time2 - time1)
 
         if self.iter == self.params.max_iter then
             self.logger.info("Done training!")

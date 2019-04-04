@@ -20,6 +20,7 @@ logger.info('Output Directory: %s', params.saveFolder)
 logger.info('Log file: %s', params.output_file)
 
 cutorch.setDevice(params.gpu_index)
+logger.info('Creating model...')
 local model = AttenModel.new(params)
 logger.info('Created model %s', model)
 logger.info('Training begins...')

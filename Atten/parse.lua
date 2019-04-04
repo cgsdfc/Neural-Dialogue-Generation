@@ -39,8 +39,6 @@ local function parse_args()
         logger.warn(string.format('saveFolder %s already exist', params.saveFolder))
     end
 
-    logger.info(params)
-
     return params;
 end
 
