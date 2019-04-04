@@ -65,7 +65,7 @@ end
 
 
 function model:test()
-    local open_train_file = io.open(self.params.test_file, "r")
+    local open_train_file= assert(io.open(self.params.test_file, "r"), 'cannot open file')
     local End, Word_s, Word_t, Mask_s, Mask_t;
     local End = 0;
     local batch_n = 1;
@@ -118,7 +118,7 @@ function model:train()
     while true do
         End = 0
         self.iter = self.iter + 1
-        local open_train_file = io.open(self.params.train_file, "r")
+        local open_train_file= assert(io.open(self.params.train_file, "r"), 'cannot open file')
         while End == 0 do
             batch_n = batch_n + 1;
             if batch_n % 5000 == 0 then

@@ -110,7 +110,7 @@ function model:train()
         if start_halving then
             self.lr = self.lr * 0.5;
         end
-        local open_train_file = io.open(self.params.train_file, "r")
+        local open_train_file= assert(io.open(self.params.train_file, "r"), 'cannot open file')
         local End, Word_s, Word_t, Mask_s, Mask_t;
         local End = 0;
         local batch_n = 1;
@@ -159,9 +159,9 @@ end
 function model:test()
     local open_train_file
     if self.mode == "dev" then
-        open_train_file = io.open(self.params.dev_file, "r")
+        open_train_file= assert(io.open(self.params.dev_file, "r"), 'cannot open file')
     elseif self.mode == "test" then
-        open_train_file = io.open(self.params.test_file, "r")
+        open_train_file= assert(io.open(self.params.test_file, "r"), 'cannot open file')
     end
     local sum_err_all = 0
     local total_num_all = 0

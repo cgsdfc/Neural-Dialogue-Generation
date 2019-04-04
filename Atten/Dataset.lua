@@ -1,5 +1,4 @@
 require "torchx"
-local stringx = require('pl.stringx')
 
 local Dataset = torch.class('Dataset')
 

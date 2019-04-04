@@ -1,14 +1,19 @@
 -- Driver script to run decoding.
-require "fbtorch"
 require "cunn"
 require "cutorch"
 require "nngraph"
+require 'logroll'
 
-local params = torch.reload("./decode_parse")
+local logger = logroll.print_logger()
+local Decoder = require('./Decoder')
+local parse_args = require('./parser')
+local params = parse_args()
+
 cutorch.setDevice(params.gpu_index)
 
-local decode_model = torch.reload("./decode_model")
-decode_model:Initial(params)
-decode_model.mode = "test"
---decode_model:test()
-decode_model:decode()
+logger.info('Creating Decoder...')
+local decoder = Decoder.new(params)
+
+decoder.mode = "test"
+logger.info('Decoding begins...')
+decoder:decode()

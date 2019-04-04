@@ -48,7 +48,7 @@ function model:Initial(params)
     print(disc_params)
     self.base_line_sum = 0;
     self.base_line_n = 0;
-    self.log_ = io.open(self.params.output_file, "w")
+    self.log_= assert(io.open(self.params.output_file, "w"), 'cannot open file')
     if self.params.baseline and self.params.baselineType == "critic" then
         self.baseline = nn.Linear(self.params.dimension, 1)
         self.baseline.weight:fill(0)
@@ -140,7 +140,7 @@ function model:train()
     self.iter = 0
     while true do
         self.iter = self.iter + 1
-        local open_train_file = io.open(self.params.trainData, "r")
+        local open_train_file= assert(io.open(self.params.trainData, "r"), 'cannot open file')
         local batch_n = 0;
         local End = 0
         while End == 0 do

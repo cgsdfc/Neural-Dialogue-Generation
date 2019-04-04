@@ -55,7 +55,7 @@ function model:lines2Embedding(lines)
 end
 
 function model:LoadGram()
-    local open_ = io.open(self.params.TopResponseFile, "r");
+    local open_= assert(io.open(self.params.TopResponseFile, "r"), 'cannot open file');
     self.FourGram = {}
     while true do
         local line = open_:read("*line");
@@ -76,7 +76,7 @@ function model:LoadGram()
 end
 
 function model:ReadFile(file)
-    local open_ = io.open(file, "r");
+    local open_= assert(io.open(file, "r"), 'cannot open file');
     local lines = {}
     while true do
         local line = open_:read("*line");
@@ -88,7 +88,7 @@ function model:ReadFile(file)
 end
 
 function model:GetScore()
-    local open_train = io.open(self.params.TrainingData)
+    local open_train= assert(io.open(self.params.TrainingData), 'cannot open file')
     local current_lines = {}
     local all_lines = {}
     self.all_scores = torch.Tensor():cuda()
@@ -127,16 +127,16 @@ function model:GetScore()
 end
 
 function model:Distill()
-    local output = io.open(self.params.OutputFile, "w")
-    local reserve = io.open("Glove_reserve_index.txt", "w")
-    local remove = io.open("Glove_remove_index.txt", "w")
+    local output= assert(io.open(self.params.OutputFile, "w"), 'cannot open file')
+    local reserve= assert(io.open("Glove_reserve_index.txt", "w"), 'cannot open file')
+    local remove= assert(io.open("Glove_remove_index.txt", "w"), 'cannot open file')
     local rank_score, index = torch.topk(self.all_scores, torch.floor(0.3 * self.all_scores:size(1)), true)
     local remove_indexes = {}
     for i = 1, torch.floor(self.params.total_lines * self.params.distill_rate) do
         remove_indexes[index[i]] = 1;
     end
     local num = 0;
-    local open_train = io.open(self.params.TrainingData)
+    local open_train= assert(io.open(self.params.TrainingData), 'cannot open file')
     local four_distill_num = 0
     local cos_distill_num = 0
     while true do

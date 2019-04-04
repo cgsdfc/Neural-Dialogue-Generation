@@ -4,8 +4,8 @@ require "cutorch"
 require "nngraph"
 require 'logroll'
 
-local parse_args = require('./parse')
-local AttenModel = require("./Model")
+local parse_args = require('Atten/parser')
+local AttenModel = require("Atten/Model")
 local logger = logroll.print_logger()
 local params = parse_args()
 

@@ -26,7 +26,7 @@ function model:__init(params)
     self.Modules[#self.Modules + 1] = self.softmax;
     assert(self.params.output_file ~= nil)
     if self.params.output_file ~= "" then
-        self.output = io.open(self.params.output_file, "w")
+        self.output= assert(io.open(self.params.output_file, "w"), 'cannot open file')
     end
 end
 
@@ -284,11 +284,11 @@ end
 function model:test()
     local open_pos_train_file, open_neg_train_file
     if self.mode == "dev" then
-        open_pos_train_file = io.open(self.params.pos_dev_file, "r")
-        open_neg_train_file = io.open(self.params.neg_dev_file, "r")
+        open_pos_train_file= assert(io.open(self.params.pos_dev_file, "r"), 'cannot open file')
+        open_neg_train_file= assert(io.open(self.params.neg_dev_file, "r"), 'cannot open file')
     elseif self.mode == "test" then
-        open_pos_train_file = io.open(self.params.pos_test_file, "r")
-        open_neg_train_file = io.open(self.params.neg_test_file, "r")
+        open_pos_train_file= assert(io.open(self.params.pos_test_file, "r"), 'cannot open file')
+        open_neg_train_file= assert(io.open(self.params.neg_test_file, "r"), 'cannot open file')
     end
     local End = 0;
     local batch_n = 1;
@@ -375,8 +375,8 @@ function model:train()
         if start_halving then
             self.lr = self.lr * 0.5;
         end
-        local open_pos_train_file = io.open(self.params.pos_train_file, "r")
-        local open_neg_train_file = io.open(self.params.neg_train_file, "r")
+        local open_pos_train_file= assert(io.open(self.params.pos_train_file, "r"), 'cannot open file')
+        local open_neg_train_file= assert(io.open(self.params.neg_train_file, "r"), 'cannot open file')
         local End = 0;
         local batch_n = 1;
         while End == 0 do

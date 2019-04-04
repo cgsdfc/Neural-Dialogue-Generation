@@ -9,7 +9,7 @@ end
 
 function model:ComputeScore()
     self.score = torch.Tensor():cuda()
-    local open_train_file = io.open(self.params.TrainingData, "r")
+    local open_train_file= assert(io.open(self.params.TrainingData, "r"), 'cannot open file')
     local End = 0
     local num = 0;
     while End == 0 do
@@ -41,9 +41,9 @@ function model:ComputeScore()
     end
     --print(self.score)
     num = 0;
-    local open_train = io.open(self.params.TrainingData, "r")
-    local output = io.open(self.params.OutputFile, "w")
-    local remove = io.open("encode_a.txt", "w")
+    local open_train= assert(io.open(self.params.TrainingData, "r"), 'cannot open file')
+    local output= assert(io.open(self.params.OutputFile, "w"), 'cannot open file')
+    local remove= assert(io.open("encode_a.txt", "w"), 'cannot open file')
     while true do
         local line = open_train:read("*line")
         if line == nil then break end
@@ -61,7 +61,7 @@ function model:ComputeScore()
 end
 
 function model:ComputeTopResponse()
-    local open_train_file = io.open(self.params.TopResponseFile, "r")
+    local open_train_file= assert(io.open(self.params.TopResponseFile, "r"), 'cannot open file')
     local End = 0
     self.TopResponseEmbedding = torch.Tensor():cuda()
     while End == 0 do

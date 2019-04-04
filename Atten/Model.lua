@@ -6,19 +6,14 @@ require 'logroll'
 
 cutorch.manualSeed(123)
 
-local stringx = require('pl.stringx')
 local tds = require('tds')
-local Dataset = require("./Dataset")
-local AttenModel = torch.class('AttenModel')
+local Dataset = require("Atten/Dataset")
 
-local function make_logger(file)
-    local plog = logroll.print_logger()
-    local flog = logroll.file_logger(file)
-    return logroll.combine(plog, flog)
-end
+local AttenModel = torch.class('AttenModel')
+local logger = logroll.print_logger()
+
 
 function AttenModel:__init(params)
-    self.logger = make_logger(params.output_file)
     self.dataset = Dataset.new(params)
     self.params = params
 
@@ -48,15 +43,20 @@ end
 
 -- Read a dictionary file in the standard format, store index, word pair in self.dict.
 function AttenModel:ReadDict()
+    local filename = self.params.dictPath
+    logger.info('loading dictionary from %s', filename)
+
     self.dict = tds.hash()
-    local open = io.open(self.params.dictPath, "r")
+    local open = assert(io.open(filename, "r"), string.format('cannot open file %s', filename))
     local index = 0
+
     while true do
         index = index + 1
         local line = open:read("*line")
         if line == nil then break end
         self.dict[index] = line
     end
+    logger.info('Done.')
 end
 
 function AttenModel:PrintMatrix(matrix)
@@ -332,7 +332,8 @@ function AttenModel:model_forward()
         else
             if self.mode == "train" then
                 input = self:clone_(self.store_s[t - 1])
-            else input = self:clone_(output)
+            else
+                input = self:clone_(output)
             end
         end
 
@@ -503,11 +504,11 @@ end
 function AttenModel:test()
     local open_train_file
     if self.mode == "dev" then
-        self.logger.info('Using develop file')
-        open_train_file = io.open(self.params.dev_file, "r")
+        logger.info('Using develop file')
+        open_train_file= assert(io.open(self.params.dev_file, "r"), 'cannot open file')
     elseif self.mode == "test" then
-        self.logger.info('Using test file')
-        open_train_file = io.open(self.params.test_file, "r")
+        logger.info('Using test file')
+        open_train_file= assert(io.open(self.params.test_file, "r"), 'cannot open file')
     end
 
     local sum_err_all = 0
@@ -536,7 +537,7 @@ function AttenModel:test()
 
     open_train_file:close()
     local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
-    self.logger.info('standard perplexity: %f', ppl)
+    logger.info('standard perplexity: %f', ppl)
 end
 
 function AttenModel:update()
@@ -574,7 +575,7 @@ function AttenModel:save()
     end
 
     local filename = string.format('%s%d', self.params.save_prefix, self.iter)
-    self.logger.info('Saving module weights to %s', filename)
+    logger.info('Saving module weights to %s', filename)
 
     local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(weights)
@@ -582,16 +583,16 @@ function AttenModel:save()
 end
 
 function AttenModel:saveParams()
-    self.logger.info(self.params)
+    logger.info(self.params)
     local filename = self.params.save_params_file
-    self.logger.info('Saving model hyper parameters to %s', filename)
+    logger.info('Saving model hyper parameters to %s', filename)
     local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(self.params)
     file:close()
 end
 
 function AttenModel:readModel()
-    self.logger.info('loading model from %s', self.params.model_file)
+    logger.info('loading model from %s', self.params.model_file)
     local file = torch.DiskFile(self.params.model_file, "r"):binary()
     local model_params = file:readObject()
     file:close()
@@ -602,7 +603,7 @@ function AttenModel:readModel()
             parameter[j]:copy(model_params[i][j])
         end
     end
-    self.logger.info("read model done")
+    logger.info("read model done")
 end
 
 function AttenModel:clear()
@@ -613,7 +614,7 @@ end
 
 function AttenModel:train()
     if self.params.saveModel then
-        self.logger.info('Saving hyper parameters...')
+        logger.info('Saving hyper parameters...')
         self:saveParams()
     end
 
@@ -622,12 +623,12 @@ function AttenModel:train()
     local start_halving = false
     self.lr = self.params.alpha
 
-    self.logger.info('Initial testing...')
+    logger.info('Initial testing...')
     self.mode = "test"
     self:test()
 
     while true do
-        self.logger.info("Epoch: %d", self.iter)
+        logger.info("Epoch: %d", self.iter)
         self.iter = self.iter + 1
 
         if self.params.start_halve ~= -1 then
@@ -639,7 +640,7 @@ function AttenModel:train()
             self.lr = self.lr * 0.5
         end
 
-        local open_train_file = io.open(self.params.train_file, "r")
+        local open_train_file= assert(io.open(self.params.train_file, "r"), 'cannot open file')
         local End, Word_s, Word_t, Mask_s, Mask_t
         local End = 0
         local batch_n = 1
@@ -648,7 +649,7 @@ function AttenModel:train()
         while End == 0 do
             batch_n = batch_n + 1
             self:clear()
-            self.logger.info('loading training dataset %s', open_train_file)
+            logger.info('loading training dataset %s', open_train_file)
             End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t,
             self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
             if End == 1 then
@@ -667,18 +668,18 @@ function AttenModel:train()
                 self.Word_t = self.Word_t:cuda()
                 self.Padding_s = self.Padding_s:cuda()
 
-                self.logger.info('Forward pass')
+                logger.info('Forward pass')
                 self:model_forward()
-                self.logger.info('Backward pass')
+                logger.info('Backward pass')
                 self:model_backward()
-                self.logger.info('Update pass')
+                logger.info('Update pass')
                 self:update()
                 local time2 = timer:time().real
             end
         end
 
         open_train_file:close()
-        self.logger.info('Running validation test...')
+        logger.info('Running validation test...')
         self.mode = "test"
         self:test()
         if self.params.saveModel then
@@ -686,10 +687,10 @@ function AttenModel:train()
         end
 
         local time2 = timer:time().real
-        self.logger.info("Batch Time: %f", time2 - time1)
+        logger.info("Batch Time: %f", time2 - time1)
 
         if self.iter == self.params.max_iter then
-            self.logger.info("Done training!")
+            logger.info("Done training!")
             break
         end
     end
