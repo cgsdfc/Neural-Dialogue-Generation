@@ -109,9 +109,9 @@ end
 function PersonaModel:test()
     local open_train_file
     if self.mode == "dev" then
-        open_train_file = assert(io.open(self.params.dev_file, "r"), 'cannot open file')
+        open_train_file = assert(io.open(self.params.dev_file, "r"), 'cannot open dev_file')
     elseif self.mode == "test" then
-        open_train_file = assert(io.open(self.params.test_file, "r"), 'cannot open file')
+        open_train_file = assert(io.open(self.params.test_file, "r"), 'cannot open test_file')
     end
 
     local sum_err_all = 0
@@ -120,8 +120,9 @@ function PersonaModel:test()
 
     while End == 0 do
         End, self.Word_s, self.Word_t,
-        self.Mask_s, self.Mask_t, self.Left_s,
-        self.Left_t, self.Padding_s, self.Padding_t,
+        self.Mask_s, self.Mask_t,
+        self.Left_s, self.Left_t,
+        self.Padding_s, self.Padding_t,
         self.Source, self.Target,
         self.SpeakerID, self.AddresseeID = self.dataset:read_train(open_train_file)
 
@@ -136,6 +137,7 @@ function PersonaModel:test()
             self.Word_t = self.Word_t:cuda()
             self.Padding_s = self.Padding_s:cuda()
             self:model_forward()
+
             local sum_err, total_num = self:model_backward()
             sum_err_all = sum_err_all + sum_err
             total_num_all = total_num_all + total_num
@@ -166,6 +168,7 @@ function PersonaModel:train()
 
         if self.params.start_halve ~= -1 then
             if self.iter > self.params.start_halve then
+                logger.info('Start halving lr.')
                 start_halving = true
             end
         end
@@ -173,18 +176,25 @@ function PersonaModel:train()
             self.lr = self.lr * 0.5
         end
 
-        local open_train_file = assert(io.open(self.params.train_file, "r"), 'cannot open file')
+        local open_train_file = assert(io.open(self.params.train_file, "r"), 'cannot open train_file')
         local End, Word_s, Word_t, Mask_s, Mask_t
         local End = 0
         local batch_n = 1
+
         local time1 = timer:time().real
 
         while End == 0 do
             batch_n = batch_n + 1
             self:clear()
-            End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t,
-            self.Left_s, self.Left_t, self.Padding_s, self.Padding_t,
-            self.Source, self.Target, self.SpeakerID, self.AddresseeID = self.dataset:read_train(open_train_file)
+
+            -- Fetch training data.
+            End, self.Word_s, self.Word_t,
+            self.Mask_s, self.Mask_t,
+            self.Left_s, self.Left_t,
+            self.Padding_s, self.Padding_t,
+            self.Source, self.Target,
+            self.SpeakerID, self.AddresseeID = self.dataset:read_train(open_train_file)
+
             if End == 1 then
                 break
             end
@@ -196,7 +206,6 @@ function PersonaModel:train()
 
             if train_this_batch then
                 self.mode = "train"
-                local time1 = timer:time().real
                 self.Word_s = self.Word_s:cuda()
                 self.Word_t = self.Word_t:cuda()
                 self.Padding_s = self.Padding_s:cuda()
@@ -209,13 +218,15 @@ function PersonaModel:train()
         open_train_file:close()
         self.mode = "test"
         self:test()
+
         if self.params.saveModel then
             self:save()
         end
 
         local time2 = timer:time().real
-        logger.info('Spent Time: %f', time2 - time1)
+        logger.info('One Epoch Time: %.4f', time2 - time1)
         if self.iter == self.params.max_iter then
+            logger.info('max_iter reached.')
             break
         end
     end

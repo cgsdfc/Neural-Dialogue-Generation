@@ -10,11 +10,12 @@ local PersonaModel = require('Persona/Model')
 
 cutorch.setDevice(params.gpu_index)
 
-logger.info('Model: Persona_SpeakerAddressee')
 logger.info('speakerSetting: %s', params.speakerSetting)
 
 logger.info('Creating Model...')
 local model = PersonaModel.new(params)
 logger.info('model.dataset: %s', model.dataset)
+
+logger.info('Training begins...')
 model:train()
 logger.info('Training done.')

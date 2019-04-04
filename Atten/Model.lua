@@ -535,6 +535,7 @@ function AttenModel:update()
     end
 end
 
+-- Save model weights.
 function AttenModel:save()
     local weights = {}
     for i = 1, #self.Modules do
@@ -549,6 +550,7 @@ function AttenModel:save()
     file:close()
 end
 
+-- Save model hparams.
 function AttenModel:saveParams()
     logger.info(self.params)
     local filename = self.params.save_params_file
