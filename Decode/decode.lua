@@ -21,3 +21,4 @@ local decoder = Decoder.new(params)
 decoder.mode = "test"
 logger.info('Decoding begins...')
 decoder:decode()
+logger.info('Decoding done.')

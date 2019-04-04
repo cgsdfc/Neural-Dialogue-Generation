@@ -421,78 +421,6 @@ function Decoder:MMIRerank(completed_history)
     return completed_history
 end
 
--- Entry point to run decoding.
-function Decoder:decode()
-
-
-    logger.info('InputFile: %s', self.params.InputFile)
-    logger.info('OutputFile: %s', self.params.OutputFile)
-
-    local output_dir = paths.dirname(self.params.OutputFile)
-    if not path.isdir(output_dir) then
-        paths.mkdir(output_dir)
-        logger.info('mkdir %s', output_dir)
-    end
-
-    local open_train_file = assert(io.open(self.params.InputFile, "r"))
-    local open_write_file = assert(io.open(self.params.OutputFile, "w"))
-
-    local End = 0
-    local batch_n = 0
-    local n_decode_instance = 0
-    local timer = torch.Timer()
-
-    while End == 0 do
-        local time1 = timer:time().real
-
-        logger.info('loading Dataset...')
-        End, self.Word_s, self.Word_t, self.Mask_s,
-        self.Mask_t, self.Left_s, self.Left_t, self.Padding_s,
-        self.Padding_t, self.Source, self.Target = self.dataset:read_train(open_train_file)
-
-        if #self.Word_s == 0 then
-            break
-        end
-
-        n_decode_instance = n_decode_instance + self.Word_s:size(1)
-        if self.params.max_decoded_num ~= 0 then
-            if n_decode_instance > self.params.max_decoded_num then
-                break
-            end
-        end
-
-        batch_n = batch_n + 1
-        if batch_n % 5000 / (self.params.batch_size / 128) == 0 then
-            print(batch_n)
-            local time_string = os.date("%c")
-            print(time_string)
-        end
-
-        self.mode = "decoding"
-        self.Word_s = self.Word_s:cuda()
-        self.Padding_s = self.Padding_s:cuda()
-
-        local completed_history
-        if self.params.setting == "sampling" or self.params.setting == "StochasticGreedy" then
-            completed_history = self:sample()
-        else
-            completed_history = self:decode_BS()
-        end
-
-        logger.info('writing OutputFile...')
-        self:Output(completed_history, open_write_file, batch_n)
-        assert(self.params.setting ~= nil)
-        local time2 = timer:time().real
-        logger.info('Spent %f seconds', time2 - time1)
-        if End == 1 then
-            break
-        end
-    end
-
-    open_write_file:close()
-    logger.info('Decoding done.')
-end
-
 -- Output the sampled sentences.
 function Decoder:Output(completed_history, open_write_file, batch_n)
     if self.params.setting == "sampling" or self.params.setting == "StochasticGreedy" then
@@ -596,6 +524,74 @@ function Decoder:DecodeIllustrationSample(open_write_file)
         completed_history = self:decode_BS()
     end
     self:Output(completed_history, open_write_file)
+end
+
+
+-- Entry point to run decoding.
+function Decoder:decode()
+    logger.info('InputFile: %s', self.params.InputFile)
+    logger.info('OutputFile: %s', self.params.OutputFile)
+
+    local output_dir = paths.dirname(self.params.OutputFile)
+    if not path.isdir(output_dir) then
+        paths.mkdir(output_dir)
+        logger.info('mkdir %s', output_dir)
+    end
+
+    local open_train_file = assert(io.open(self.params.InputFile, "r"))
+    local open_write_file = assert(io.open(self.params.OutputFile, "w"))
+
+    local End = 0
+    local batch_n = 0
+    local n_decode_instance = 0
+    local timer = torch.Timer()
+
+    while End == 0 do
+        local time1 = timer:time().real
+
+        logger.info('loading InputFile...')
+        End, self.Word_s, self.Word_t, self.Mask_s,
+        self.Mask_t, self.Left_s, self.Left_t, self.Padding_s,
+        self.Padding_t, self.Source, self.Target = self.dataset:read_train(open_train_file)
+
+        if #self.Word_s == 0 then
+            break
+        end
+
+        n_decode_instance = n_decode_instance + self.Word_s:size(1)
+        if self.params.max_decoded_num ~= 0 then
+            if n_decode_instance > self.params.max_decoded_num then
+                break
+            end
+        end
+
+        batch_n = batch_n + 1
+        if batch_n % 5000 / (self.params.batch_size / 128) == 0 then
+            logger.info(batch_n)
+            logger.info(os.date("%c"))
+        end
+
+        self.mode = "decoding"
+        self.Word_s = self.Word_s:cuda()
+        self.Padding_s = self.Padding_s:cuda()
+
+        local completed_history
+        if self.params.setting == "sampling" or self.params.setting == "StochasticGreedy" then
+            completed_history = self:sample()
+        else
+            completed_history = self:decode_BS()
+        end
+
+        logger.info('writing OutputFile...')
+        self:Output(completed_history, open_write_file, batch_n)
+
+        local time2 = timer:time().real
+        logger.info('Spent %f seconds', time2 - time1)
+        if End == 1 then
+            break
+        end
+    end
+    open_write_file:close()
 end
 
 return Decoder
