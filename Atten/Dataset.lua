@@ -79,7 +79,6 @@ end
 
 
 function Dataset:read_train(open_train_file)
-    local Y = {}
     local Source = {}
     local Target = {}
     local i = 0
@@ -93,7 +92,7 @@ function Dataset:read_train(open_train_file)
             break
         end
 
-        two_strings = stringx.split(str, "|")
+        local two_strings = stringx.split(str, "|")
         assert(self.params.reverse ~= nil)
 
         if self.params.reverse then
@@ -116,8 +115,8 @@ function Dataset:read_train(open_train_file)
         return End, {}, {}, {}, {}, {}, {}
     end
 
-    Words_s, Masks_s, Left_s, Padding_s = self:get_batch(Source, true)
-    Words_t, Masks_t, Left_t, Padding_t = self:get_batch(Target, false)
+    local Words_s, Masks_s, Left_s, Padding_s = self:get_batch(Source, true)
+    local Words_t, Masks_t, Left_t, Padding_t = self:get_batch(Target, false)
     return End, Words_s, Words_t, Masks_s, Masks_t, Left_s, Left_t, Padding_s, Padding_t, Source, Target
 end
 

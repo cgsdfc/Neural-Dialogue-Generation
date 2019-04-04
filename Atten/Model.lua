@@ -47,7 +47,7 @@ end
 function AttenModel:ReadDict()
     self.dict = tds.hash()
     local open = io.open(self.params.dictPath, "r")
-    index = 0
+    local index = 0
     while true do
         index = index + 1
         local line = open:read("*line")
@@ -72,7 +72,7 @@ function AttenModel:IndexToWord(vector)
     if vector:nDimension() == 2 then
         vector = torch.reshape(vector, vector:size(2))
     end
-    string = ""
+    local string = ""
     for i = 1, vector:size(1) do
         if self.dict[vector[i]] ~= nil then
             -- In vocab
@@ -103,7 +103,7 @@ function AttenModel:copy(A)
 end
 
 function AttenModel:clone_(A)
-    B = {}
+    local B = {}
     for i = 1, #A do
         if A[i]:nDimension() == 2 then
             B[i] = torch.Tensor(A[i]:size(1), A[i]:size(2)):cuda()
@@ -177,6 +177,7 @@ function AttenModel:lstm_target_()
         local prev_h = inputs[ll * 2 - 1]
         local prev_c = inputs[ll * 2]
 
+        local x
         if ll == 1 then
             x = nn.LookupTable(self.params.vocab_target, self.params.dimension)(x_)
         else
@@ -193,8 +194,8 @@ function AttenModel:lstm_target_()
             local atten_feed = self:attention()
             atten_feed.name = 'atten_feed'
             local context1 = atten_feed({ inputs[self.params.layers * 2 - 1], context, source_mask })
-            drop_f = nn.Dropout(self.params.dropout)(context1)
-            f2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_f)
+            local drop_f = nn.Dropout(self.params.dropout)(context1)
+            local f2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_f)
             gates = nn.CAddTable()({ nn.CAddTable()({ i2h, h2h }), f2h })
         else
             gates = nn.CAddTable()({ i2h, h2h })
@@ -278,10 +279,11 @@ function AttenModel:lstm_source_()
     for ll = 1, self.params.layers do
         local prev_h = inputs[ll * 2 - 1]
         local prev_c = inputs[ll * 2]
+        local x
         if ll == 1 then
-            local x = nn.LookupTable(self.params.vocab_source, self.params.dimension)(inputs[#inputs])
+            x = nn.LookupTable(self.params.vocab_source, self.params.dimension)(inputs[#inputs])
         else
-            local x = outputs[(ll - 1) * 2 - 1]
+            x = outputs[(ll - 1) * 2 - 1]
         end
 
         local drop_x = nn.Dropout(self.params.dropout)(x)
@@ -566,7 +568,7 @@ end
 function AttenModel:save()
     local params = {}
     for i = 1, #self.Modules do
-        params[i], _ = self.Modules[i]:parameters()
+        params[i] = self.Modules[i]:parameters()
     end
 
     local file = torch.DiskFile(self.params.save_prefix .. self.iter, "w"):binary()

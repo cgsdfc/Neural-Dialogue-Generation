@@ -15,5 +15,7 @@ logger.info('Using GPU %d', params.gpu_index)
 cutorch.setDevice(params.gpu_index)
 
 local model = AttenModel.new(params)
+logger.info('Created model %s', model)
 
+logger.info('Training begins...')
 model:train()
