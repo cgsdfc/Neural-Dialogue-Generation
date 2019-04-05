@@ -19,6 +19,36 @@ This code requires Torch7 and the following luarocks packages
 * [nngraph](https://github.com/torch/nngraph)
 * [torchx](https://github.com/nicholas-leonard/torchx)
 * [tds](https://github.com/torch/tds)
+* [logroll](https://github.com/rosejn/logroll.git)
+
+You are recommended to use `docker` to set up your environment. In particular, the code is tested against the [cuda-torch-mega](https://github.com/Kaixhin/docker-torch-mega.git) image. Follow these instructions to get started as soon as possible.
+
+First, ensure the necessary building blocks `nvidia-docker2` is installed and working. Then pull the docker image.
+
+We provide some handy scripts in `scripts/` to start the *torch interactive shell* or `th` and bash. All you need to do is
+to adjust the hard-coded path in the `script/start-bash.sh` and `script/start-th.sh`. Now test your environment with
+
+    scripts/start-th.sh
+    
+If everything works, you shall see the greeting from `th`.
+To run the regression tests, fire the script:
+
+    script/test-all.sh
+    
+*Important:* All the bash scripts and all the hard-coded path assume the current working directory is the project root, namely
+`Neural-Dialogue-Generation/`. To run a script, you should sit on `Neural-Dialogue-Generation` and write the relative path to
+the script. You should *never* `cd` into the directory holding the script and run it from there!
+In short:
+
+    # Correct.
+    cd Neural-Dialogue-Generation/
+    th Atten/train_atten.lua
+    
+    # Wrong!
+    cd Neural-Dialogue-Generation/Atten/
+    th train_atten.lua
+
+For the most of time, you won't notice the problem of paths.
 
 # Download Data
 Processed training datasets can be downloaded at [link](http://nlp.stanford.edu/data/OpenSubData.tar) (unpacks to 8.9GB). 
@@ -39,10 +69,29 @@ All tokens have been transformed to indexes (dictionary file found at ``data/mov
 - [Future_Prediction](docs/Future_Prediction.md)
 - [Distill](docs/Distill.md)
 
-# Acknowledgments
-[Yoon Kim](http://people.fas.harvard.edu/~yoonkim)'s [MT repo](https://github.com/harvardnlp/seq2seq-attn)
+# Modification
 
-LantaoYu's [SeqGAN Repo](https://github.com/LantaoYu/SeqGAN)
+## Enhancement
+- Dependency on `fbtorch` is dropped.
+- More informative logging.
+- Use canonical `torch.class()` rather than alcoholic tables in OOP.
+- Regression tests for every module.
+- Sensible help strings for every option (well, almost).
+- Cleaner source codebase.
+    * No overly long line.
+    * No semicolons.
+    * Proper line breaking.
+    * No more *suspicious creation of globals*.
+    * Self-explanatory namings. 
+    
+## Downsides
+- Possibly incompatible with the original code. Like slight changes in model saving filenames.
+- Source files are renamed quite a lot.
+
+# Acknowledgments
+- [Jiwei Li's Original Repo](https://github.com/jiweil/Neural-Dialogue-Generation.git)
+- [Yoon Kim](http://people.fas.harvard.edu/~yoonkim)'s [MT repo](https://github.com/harvardnlp/seq2seq-attn)
+- LantaoYu's [SeqGAN Repo](https://github.com/LantaoYu/SeqGAN)
 
 # Licence
 MIT Licence
