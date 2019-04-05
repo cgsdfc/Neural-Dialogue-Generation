@@ -37,7 +37,7 @@ local function parse_args()
     cmd:option("-dialogue_length", 2,
         "the number of turns for a dialogue. the model supports multi-turn dialgoue classification")
 
-    cmd:option("-saveFolder", "save", "the folder to save models and parameters")
+    cmd:option("-saveFolder", "save/", "the folder to save models and parameters")
 
     cmd:option("-gpu_index", 2, "which GPU to use")
 
