@@ -186,8 +186,6 @@ function RLModel:trainDistModel(open_train_file)
 end
 
 function RLModel:train()
-    logger.info('training DisModel %d times', self.params.dSteps)
-
     self.iter = 0
 
     while true do
@@ -209,9 +207,9 @@ function RLModel:train()
 
             if batch_n % self.params.logFreq == 0 then
                 self.log_:write("batch_n  " .. batch_n .. "\n")
-                --self:decodeSample()
+                self:decodeSample()
                 self.generate_model.mode = "test"
-                --self.generate_model:test()
+                self.generate_model:test()
                 self:save(batch_n)
             end
 

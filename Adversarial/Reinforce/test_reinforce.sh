@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
-DISC_PARAMS=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation/save/test-adv-dis/params
-DISC_MODEL=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation/save/test-adv-dis/iter6
+# Test the training of the discriminator.
 
-GENERATE_PARAMS=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation/save/test-atten/params
-GENERATE_MODEL=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation/save/test-atten/model8
+DISC_PARAMS=./save/test-adv-dis/params
+DISC_MODEL=./save/test-adv-dis/iter6
 
-SAVE_FOLDER=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation/save/test-reinforce
+GENERATE_PARAMS=./save/test-atten/params
+GENERATE_MODEL=./save/test-atten/model8
+
+SAVE_FOLDER=./save/test-reinforce
 
 
 th Adversarial/Reinforce/train.lua \
