@@ -8,11 +8,11 @@ local function parse_args()
     cmd:option("-dimension", 1024, "vector dimensionality")
     cmd:option("-dropout", 0.2, "dropout rate")
 
-    cmd:option("-dictPath", "./data/movie_25000", "dictionary file")
+    cmd:option("-dictPath", "data/movie_25000", "dictionary file")
     -- note the default files are different from Atten.
-    cmd:option("-train_file", "./data/speaker_addressee_train.txt", "training file")
-    cmd:option("-dev_file", "./data/speaker_addressee_dev.txt", "develop file")
-    cmd:option("-test_file", "./data/speaker_addressee_test.txt", "test file")
+    cmd:option("-train_file", "data/speaker_addressee_train.txt", "training file")
+    cmd:option("-dev_file", "data/speaker_addressee_dev.txt", "develop file")
+    cmd:option("-test_file", "data/speaker_addressee_test.txt", "test file")
 
     cmd:option("-init_weight", 0.1, "")
     cmd:option("-alpha", 1, "")

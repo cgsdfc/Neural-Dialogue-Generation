@@ -5,22 +5,22 @@ local function parse_args()
     cmd:option("-dropout", 0.2, "dropout rate")
 
     -- Positive and Negative datasets for train, dev and test.
-    cmd:option("-pos_train_file", "./data/t_given_s_train.txt",
+    cmd:option("-pos_train_file", "data/t_given_s_train.txt",
         "human generated training examples (positive example)")
 
-    cmd:option("-neg_train_file", "./data/decoded_train.txt",
+    cmd:option("-neg_train_file", "data/decoded_train.txt",
         "machine generated training examples (negative example)")
 
-    cmd:option("-pos_dev_file", "./data/t_given_s_dev.txt",
+    cmd:option("-pos_dev_file", "data/t_given_s_dev.txt",
         "human generated dev examples (positive example)")
 
-    cmd:option("-neg_dev_file", "./data/decoded_dev.txt",
+    cmd:option("-neg_dev_file", "data/decoded_dev.txt",
         "machine generated dev examples (negative example)")
 
-    cmd:option("-pos_test_file", "./data/t_given_s_test.txt",
+    cmd:option("-pos_test_file", "data/t_given_s_test.txt",
         "human generated test examples (positive example)")
 
-    cmd:option("-neg_test_file", "./data/decoded_test.txt",
+    cmd:option("-neg_test_file", "data/decoded_test.txt",
         "machine generated test examples (negative example)")
 
     cmd:option("-source_max_length", 50, "maximum sequence length")

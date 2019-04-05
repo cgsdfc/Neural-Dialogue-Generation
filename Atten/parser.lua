@@ -28,7 +28,7 @@ local function parse_args()
     cmd:option("-reverse", false, "whether to reverse the sources")
     cmd:option("-gpu_index", 1, "the index of GPU to use")
     cmd:option("-saveModel", true, "whether to save the trained model")
-    cmd:option("-dictPath", "./data/movie_25000", "dictionary file")
+    cmd:option("-dictPath", "data/movie_25000", "dictionary file")
 
     logger.info('Parsing cmdline arguments...')
     local params = cmd:parse(arg)
