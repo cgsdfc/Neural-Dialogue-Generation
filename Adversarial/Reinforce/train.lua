@@ -1,7 +1,7 @@
 require "cunn"
 require "cutorch"
 require "nngraph"
-require "fbtorch"
+
 local params = torch.reload("./parse")
 local model = torch.reload("./model")
 cutorch.manualSeed(123)

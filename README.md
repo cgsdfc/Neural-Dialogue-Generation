@@ -13,7 +13,7 @@ This project is maintained by [Jiwei Li](http://www.stanford.edu/~jiweil/). Feel
 
 # Setup
 
-This code requires Torch7 and the following luarocks packages 
+This code requires Torch7 and the following luarocks packages
 * [torch-trepl](https://github.com/torch/trepl.git)
 * [fbtorch](https://github.com/facebook/fbtorch)
 * [cutorch](https://github.com/torch/cutorch)
@@ -34,7 +34,7 @@ Processed training datasets can be downloaded at [link](http://nlp.stanford.edu/
 
 
 # Atten
-Training a vanilla attention encoder-decoder model. 
+Training a vanilla attention encoder-decoder model.
 
 Available options include:
 
@@ -61,10 +61,10 @@ Available options include:
     -saveModel      (default true, whether to save the trained model)
     -dictPath       (default ../data/movie_25000, dictionary file)
 
-training/dev/testing data: each line corresponds a source-target pair (in ``t_given_s*.txt``) or target-source pair (in ``s_given_t*.txt``) separated by ``"|"``. 
+training/dev/testing data: each line corresponds a source-target pair (in ``t_given_s*.txt``) or target-source pair (in ``s_given_t*.txt``) separated by ``"|"``.
 
 to train the forward p(t|s) model, run
-        
+
     th train_atten.lua \
         -train_file ../data/t_given_s_train.txt \
         -dev_file ../data/t_given_s_dev.txt \
@@ -85,7 +85,7 @@ the trained models will be stored in ``save_s_given_t/model*``. input parameters
 
 # Decode
 
-Decoding given a pre-trained generative model. The pre-trained model doesn't have to be a vanilla Seq2Seq model (for example, it can be a trained model from adversarial learning).   
+Decoding given a pre-trained generative model. The pre-trained model doesn't have to be a vanilla Seq2Seq model (for example, it can be a trained model from adversarial learning).
 
 Available options include:
 
@@ -110,7 +110,7 @@ Available options include:
     -dictPath       (default ../data/movie_25000, dictionary file)
 
 to run the model
-    
+
     th decode.lua [params]
 
 to run the mutual information reranking model in [1],  ```-MMI_params_file``` and ``-MMI_model_file`` need to be pre-specified
@@ -134,11 +134,11 @@ to train the model
 
     th train.lua [params]
 
-# Adversarial 
+# Adversarial
 
 the adversarial-reinforcement learning model and the adversarial-evaluation model described in [3]
 
-## discriminative 
+## discriminative
 
 adversarial-evaluation: to train a binary evaluator (a hierarchical neural net) to label dialogues as machine-generated (negative) or human-generated (positive)
 
@@ -176,8 +176,8 @@ Available options include:
     -vanillaReinforce       (default false, whether to use vanilla Reinforce or Monte Carlo)
     -MonteCarloExample_N    (default 5, number of tries for Monte Carlo search to approximnate the expectation)
     -baseline       (default true, whether to use baseline or not)
-    -baselineType   (default "critic", taking value of either "aver" or "critic". If set to "critic", another neural model is 
-                    trained to estimate the reward, the role of which is similar to the critic in the actor-critic RL model; 
+    -baselineType   (default "critic", taking value of either "aver" or "critic". If set to "critic", another neural model is
+                    trained to estimate the reward, the role of which is similar to the critic in the actor-critic RL model;
                     If set to "aver", just use the average reward for earlier examples as a baseline")
     -baseline_lr    (default 0.0005, learning rate for updating the critic)
     -logFreq        (default 2000, how often to print the log and save the model)
@@ -186,29 +186,29 @@ Available options include:
     -dSteps         (default 5, how often to update the discriminative model)
     -TeacherForce   (default true, whether to run the teacher forcing model)
 
-To run the adversarial-reinforcement learning model, a pretrained generative model and a pretrained discriminative model are needed. 
+To run the adversarial-reinforcement learning model, a pretrained generative model and a pretrained discriminative model are needed.
 Trained models will be saved and can be later re-loaded for decoding using different decoding strategies in the folder ``Decode/``.
 
 to train the model
 
     th train.lua [params]
 
-Note: if you encounter the following error ``"bad argument # 2 to '?' (out of range) in function model_backward"`` after training the model 
-for tens of hours, this means the model has exploded (see the teacher forcing part in Section 3.2 of the paper). 
-The reason why the error appears as ``"bad argument #2 to '?'"`` is because of the sampling algorithm in Torch. 
+Note: if you encounter the following error ``"bad argument # 2 to '?' (out of range) in function model_backward"`` after training the model
+for tens of hours, this means the model has exploded (see the teacher forcing part in Section 3.2 of the paper).
+The reason why the error appears as ``"bad argument #2 to '?'"`` is because of the sampling algorithm in Torch.
 If you encounter this issue, shrink the value of the variable ``-Timeslr``.
 
-# Future_Prediction 
+# Future_Prediction
 
 the future prediction (Soothsayer) models described in [4]
 
-## train_length 
+## train_length
 
 to train the Soothsayer Model for Length Prediction
 
 Available options include:
 
-    -dimension          (default 512, vector dimensionality. The value should be the same as that of the pretrained Seq2Seq model. 
+    -dimension          (default 512, vector dimensionality. The value should be the same as that of the pretrained Seq2Seq model.
                         Otherwise, an error will be reported)
     -params_file        (default "../../Atten/save_t_given_s/params", load hyperparameters for a pre-trained generative model)
     -generate_model     (default ../../Atten/save_t_given_s/model1, path for loading the pre-trained generative model)
@@ -231,7 +231,7 @@ train the Soothsayer Model to predict the backward probability p(s|t) of the mut
 
 Available options include:
 
-    -dimension              (default 512, vector dimensionality. This value should be the same as that of the pretrained Seq2Seq model. 
+    -dimension              (default 512, vector dimensionality. This value should be the same as that of the pretrained Seq2Seq model.
                             Otherwise, an error will be reported)
     -batch_size             (default 128, batch_size)
     -save_model_path        (default "save")
@@ -254,22 +254,22 @@ to train the model (a pretrained forward Seq2Seq model p(t|s) and a backward mod
 
 
 ## decode
-    
+
 decoding by combining a pre-trained Seq2Seq model and a Soothsayer future prediction model
-    
+
 Other than the input parameters of the standard decoding model in the folder ``Decode/``, additional options include:
 
     -Task                   (the future prediction task, taking values of "length" or "backward")
-    -target_length          (default 0, forcing the model to generate sequences of a pre-specific length. 
+    -target_length          (default 0, forcing the model to generate sequences of a pre-specific length.
             0 if there is no such a constraint. If your task is "length", a value for -target_length is required)
-    -FuturePredictorModelFile   (path for loading a pre-trained Soothsayer future prediction model. 
-            If "Task" takes a value of "length", the value of FuturePredictorModelFile should be a model saved from 
-            training length prediction model in folder train_length. If "Task" takes a value of "backward", 
+    -FuturePredictorModelFile   (path for loading a pre-trained Soothsayer future prediction model.
+            If "Task" takes a value of "length", the value of FuturePredictorModelFile should be a model saved from
+            training length prediction model in folder train_length. If "Task" takes a value of "backward",
             the model is a model saved from training the backward probability model in the folder train_backward)
     -PredictorWeight        (default 0, the weight for the Soothsayer model)
-    
+
 To run the decoder with a pre-trained Soothsayer model of length:
-    
+
     th decode.lua \
         -params_file hyperparameterFile_pretrained_seq2seq \
         -model_file modelFile_pretrained_seq2seq \
@@ -279,7 +279,7 @@ To run the decoder with a pre-trained Soothsayer model of length:
         -PredictorWeight 1 \
         -Task length \
         -target_length 15
-    
+
 To run the decoder with a pre-trained Soothsayer model of backward probability:
 
     th decode.lua \
@@ -290,7 +290,7 @@ To run the decoder with a pre-trained Soothsayer model of backward probability:
         -FuturePredictorModelFile modelFile_Soothsayer_backward \
         -PredictorWeight 1 \
         -Task backward
-    
+
 If you want to perform MMI reranking at the end,  ``-MMI_params_file`` and ``-MMI_model_file`` have to be pre-specified.
 
 # Distill
@@ -317,10 +317,10 @@ to run the model:
 * Second, extract top frequent responses:
 
 
-    cd ../Distill/extract_top 
+    cd ../Distill/extract_top
     sh select_top_decoded.sh <yourDecodingOutputFile> <yourFileToStoreTopResponses>
 
-* Third, compute relevance scores for the entire training set and then distill the training set. 
+* Third, compute relevance scores for the entire training set and then distill the training set.
 The code provides two different ways to compute the scores: using a pre-trained Seq2Seq model or averaging Glove embeddings:
 
 
@@ -329,45 +329,45 @@ The code provides two different ways to compute the scores: using a pre-trained 
 ## Glove
 
 options include
-    
+
     -TrainingData       (path for your training data to distill)
     -TopResponseFile    (path for your extracted top frequent responses)
     -batch_size         (default 1280, batch size)
     -save_score_file    (default "relevance_score", path for saving relevance_score for each instance in the training set)
     -distill_rate       (default 0.08, the proportion of training data to distill in this round)
-    -distill_four_gram  (default true, whether to remove all training instances that share four-grams 
+    -distill_four_gram  (default true, whether to remove all training instances that share four-grams
                         with any one of the top frequent responses)
     -loadscore          (default false, whether to load already-computed relevance scores)
     -save_score         (default false, wehther to save relevance scores)
 
-Compute relevance scores: 
-    
+Compute relevance scores:
+
     th run.lua \
         -TopResponseFile <yourFileToStoreTopResponses> \
         -TrainingData <yourTrainingData> \
         -OutputFile <FileForRemainingData> \
         -save_score \
         -save_score_file relevance_score
-    
-Distill the Data: 
-    
+
+Distill the Data:
+
     th run.lua \
         -TopResponseFile yourFileToStoreTopResponses \
         -TrainingData yourTrainingData \
         -OutputFile FileForRemainingData \
         -total_lines "number of lines in yourTrainingData" \
-        -save_score_file relevance_score 
+        -save_score_file relevance_score
 
 The remaining data after this round of data distillation will be stored in ``FileForRemainingData``,
 on which a new Seq2Seq model will be trained.
-        
+
 ## Encoder
-use a pre-trained Seq2Seq model for data distillation. 
+use a pre-trained Seq2Seq model for data distillation.
 Other than input parameters in Glove, the path for a pre-trained Seq2Seq model needs to be pre-specified:
 
     -params_file    (default "../../Atten/save_t_given_s/params", hyperparameters for the pre-trained generative model)
     -model_file     (default ../../Atten/save_t_given_s/model1, path for loading a pre-trained generative model)
-    
+
 to run the model:
 
     th distill_encode.lua \

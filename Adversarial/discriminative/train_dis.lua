@@ -5,10 +5,10 @@ require "logroll"
 
 local logger = logroll.print_logger()
 local parse_args = require("Adversarial/discriminative/parser")
-local DisModel = require("Adversarial/discriminative/Model")
+local Discriminator = require("Adversarial/discriminative/Model")
 
 local params = parse_args()
-local model = DisModel.new(params)
+local model = Discriminator.new(params)
 
 cutorch.manualSeed(123)
 cutorch.setDevice(params.gpu_index)
