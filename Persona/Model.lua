@@ -168,7 +168,6 @@ function PersonaModel:train()
 
         if self.params.start_halve ~= -1 then
             if self.iter > self.params.start_halve then
-                logger.info('Start halving lr.')
                 start_halving = true
             end
         end

@@ -14,7 +14,6 @@ function Decoder:__init(params)
     local params_file = torch.DiskFile(params.params_file, "r"):binary()
     local model_params = params_file:readObject()
     params_file:close()
-    logger.info('Done.')
 
     for k, v in pairs(model_params) do
         if params[k] == nil then
@@ -26,7 +25,6 @@ function Decoder:__init(params)
     self.params = params
     logger.info('Decoder initializing...')
     self:DecoderInitial()
-    logger.info('Done.')
 
     if self.params.MMI then
         self:LoadMMIModel()
@@ -515,7 +513,6 @@ function Decoder:DecodeIllustrationSample(open_write_file)
     self.Word_t, self.Mask_t, self.Left_t, self.Padding_t = self.dataset:get_batch(self.SampleTarget, false)
     self.mode = "decoding"
     self:model_forward()
-    print(self.params.setting)
 
     local completed_history
     if self.params.setting == "sampling" or self.params.setting == "StochasticGreedy" then

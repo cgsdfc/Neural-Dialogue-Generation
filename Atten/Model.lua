@@ -64,7 +64,6 @@ function AttenModel:ReadDict()
         if line == nil then break end
         self.dict[index] = line
     end
-    logger.info('Done.')
 end
 
 function AttenModel:PrintMatrix(matrix)
@@ -562,7 +561,7 @@ end
 -- Save model hparams.
 function AttenModel:saveParams()
     local filename = self.params.save_params_file
-    logger.info('Saving model hyper parameters to %s', filename)
+    logger.info('Saving params to %s', filename)
     local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(self.params)
     file:close()
@@ -580,7 +579,6 @@ function AttenModel:readModel()
             parameter[j]:copy(model_params[i][j])
         end
     end
-    logger.info("read model done")
 end
 
 function AttenModel:clear()
@@ -667,7 +665,6 @@ function AttenModel:train()
         while End == 0 do
             batch_n = batch_n + 1
             self:clear()
-            logger.info('loading training dataset %s', open_train_file)
 
             End, self.Word_s, self.Word_t,
             self.Mask_s, self.Mask_t,
@@ -690,11 +687,8 @@ function AttenModel:train()
                 self.Word_t = self.Word_t:cuda()
                 self.Padding_s = self.Padding_s:cuda()
 
-                logger.info('Forward pass')
                 self:model_forward()
-                logger.info('Backward pass')
                 self:model_backward()
-                logger.info('Update pass')
                 self:update()
             end
         end

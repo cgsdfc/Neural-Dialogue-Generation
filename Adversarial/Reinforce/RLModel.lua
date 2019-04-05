@@ -199,14 +199,14 @@ function RLModel:train()
 
         if self.iter % self.params.logFreq == 0 then
             self.log_:write(string.format('Epoch: %d\n', self.iter))
-            logger.info('decoding samples...')
+            logger.info('[Validate] decoding samples...')
             self:decodeSample()
 
-            logger.info('validation...')
+            logger.info('[Validate] testing...')
             self.generate_model.mode = "test"
             self.generate_model:test()
 
-            logger.info('saving models...')
+            logger.info('[Validate] saving models...')
             self:save()
         end
 

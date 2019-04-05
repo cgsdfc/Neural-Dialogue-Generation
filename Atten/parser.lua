@@ -30,7 +30,6 @@ local function parse_args()
     cmd:option("-saveModel", true, "whether to save the trained model")
     cmd:option("-dictPath", "data/movie_25000", "dictionary file")
 
-    logger.info('Parsing cmdline arguments...')
     local params = cmd:parse(arg)
     print(params)
     return params

@@ -84,7 +84,6 @@ function DisModel:readModel()
             parameter[j]:copy(model_params[i][j])
         end
     end
-    logger.info("read model done")
 end
 
 function DisModel:save(iter)
@@ -99,12 +98,13 @@ function DisModel:save(iter)
     local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(params)
     file:close()
-    logger.info('save model done')
 end
 
 function DisModel:saveParams()
-    assert(self.params.save_params_file)
-    local file = torch.DiskFile(self.params.save_params_file, "w"):binary()
+    local filename = self.params.save_params_file
+    assert(filename)
+    logger.info('saving params to %s', filename)
+    local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(self.params)
     file:close()
 end
@@ -385,7 +385,7 @@ function DisModel:test()
     local accuracy = right_instance / total_instance
     local batch_ppl = ppl / batch_n
 
-    logger.info('Epoch: %d', self.iter)
+    logger.info('Test results:')
     logger.info('right_instance: %d', right_instance)
     logger.info('total_instance: %d', total_instance)
     logger.info('accuracy: %f', accuracy)
@@ -487,7 +487,7 @@ function DisModel:train()
         open_pos_train_file:close()
         open_neg_train_file:close()
 
-        logger.info('Running validation test...')
+        logger.info('Testing...')
         self.mode = "test"
         self:test()
 

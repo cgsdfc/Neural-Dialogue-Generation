@@ -22,7 +22,6 @@ local function parse_args()
     cmd:option("-trainData", "data/t_given_s_train.txt", "path for the training set")
     cmd:option("-devData", "data/t_given_s_dev.txt", "path for the dev set")
     cmd:option("-testData", "data/t_given_s_test.txt", "path for the test set")
-
     cmd:option("-saveFolder", "save/", "path for data saving")
 
     cmd:option("-gpu_index", 2, "")
