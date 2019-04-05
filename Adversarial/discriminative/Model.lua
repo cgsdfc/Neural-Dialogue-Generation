@@ -6,13 +6,13 @@ require "nngraph"
 
 
 local logger = logroll.print_logger()
-local DisData = require('Adversarial/discriminative/Data')
+local DisDataset = require('Adversarial/discriminative/Dataset')
 local DisModel = torch.class('DisModel')
 
 
 function DisModel:__init(params)
     logger.info('Creating DisData...')
-    self.Data = DisData.new(params)
+    self.dataset = DisDataset.new(params)
     self.params = params
 
     logger.info('Creating word-level LSTM...')
@@ -346,7 +346,7 @@ function DisModel:test()
 
         End, self.labels, self.Word_s,
         self.Mask_s, self.Left_s,
-        self.Padding_s = self.Data:read_train(open_pos_train_file, open_neg_train_file)
+        self.Padding_s = self.dataset:read_train(open_pos_train_file, open_neg_train_file)
 
         if End == 1 then
             break
@@ -457,7 +457,7 @@ function DisModel:train()
 
             End, self.labels, self.Word_s,
             self.Mask_s, self.Left_s,
-            self.Padding_s = self.Data:read_train(open_pos_train_file, open_neg_train_file)
+            self.Padding_s = self.dataset:read_train(open_pos_train_file, open_neg_train_file)
 
             if End == 1 then
                 break

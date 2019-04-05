@@ -1,8 +1,8 @@
 require "torchx"
 
-local DisData = torch.class('DisData')
+local DisDataset = torch.class('DisDataset')
 
-function DisData:__init(params)
+function DisDataset:__init(params)
     self.params = params
 end
 
@@ -20,7 +20,7 @@ local function split(str)
 end
 
 
-function DisData:split(str)
+function DisDataset:split(str)
     local split = stringx.split(str, " ")
     local tensor = torch.Tensor(1, #split):zero()
     local count = 0
@@ -33,7 +33,7 @@ function DisData:split(str)
     return tensor
 end
 
-function DisData:get_batch(Source)
+function DisDataset:get_batch(Source)
     local Words_s = {}
     local Padding_s = {}
     local Mask_s = {}
@@ -65,7 +65,7 @@ function DisData:get_batch(Source)
     return Words_s, Mask_s, Left_s, Padding_s
 end
 
-function DisData:read_train(open_pos_train_file, open_neg_train_file)
+function DisDataset:read_train(open_pos_train_file, open_neg_train_file)
     assert(self.params.batch_size >= 2, 'batch_size must >= 2')
     local Source = {}
     local labels = torch.Tensor(self.params.batch_size)
@@ -118,4 +118,4 @@ function DisData:read_train(open_pos_train_file, open_neg_train_file)
     return End, labels, Words_s, Masks_s, Left_t, Padding_s
 end
 
-return DisData
+return DisDataset

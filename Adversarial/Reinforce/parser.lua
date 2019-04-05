@@ -1,3 +1,7 @@
+require 'logroll'
+
+local logger = logroll.print_logger()
+
 local function parse_args()
     local cmd = torch.CmdLine()
 
@@ -21,7 +25,7 @@ local function parse_args()
 
     cmd:option("-saveFolder", "save/", "path for data saving")
 
-    cmd:option("-gpu_index", 1, "")
+    cmd:option("-gpu_index", 2, "")
     cmd:option("-lr", 1, "")
     cmd:option("-dimension", 512, "")
     cmd:option("-batch_size", 64, "")
@@ -50,21 +54,24 @@ local function parse_args()
 
     local params = cmd:parse(arg)
 
-    local function make_save_folder(params)
+    -- *Note*: the real saveFold is a subdir of the passed-in saveFolder.
+    local function make_subdir(params)
         local has_monte_carlo = params.vanillaReinforce and 'MC_no' or 'MC_yes'
         local has_teacher = params.TeacherForce and 'Teacher_yes' or 'Teacher_no'
         local has_baseline = params.baseline and 'Base_yes' or 'Base_no'
         local lr_str = 'lr_' .. params.Timeslr
         local subdir = stringx.join('_', { has_monte_carlo, has_teacher, has_baseline, lr_str })
+        logger.info('subdir: %s', subdir)
         return path.join(params.saveFolder, subdir)
     end
 
-    local saveFolder = make_save_folder(params)
-    if not path.isdir(saveFolder) then
-        paths.mkdir(params.saveFolder)
+    local subdir = make_subdir(params)
+    if not path.isdir(subdir) then
+        logger.info('mkdir %s', subdir)
+        paths.mkdir(subdir)
     end
 
-    params.saveFolder = saveFolder
+    params.saveFolder = subdir
     params.save_prefix = path.abspath(params.saveFolder)
 
     params.save_prefix_dis = path.join(params.saveFolder, "dis_model")

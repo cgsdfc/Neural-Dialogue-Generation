@@ -139,7 +139,7 @@ function RLModel:trainDistModel(open_train_file)
     self.generate_model.Mask_s, self.generate_model.Mask_t,
     self.generate_model.Left_s, self.generate_model.Left_t,
     self.generate_model.Padding_s, self.generate_model.Padding_t,
-    self.generate_model.Source, self.generate_model.Target = self.generate_model.Data:read_train(open_train_file)
+    self.generate_model.Source, self.generate_model.Target = self.generate_model.dataset:read_train(open_train_file)
 
     if End == 1 then
         return End
@@ -168,7 +168,7 @@ function RLModel:trainDistModel(open_train_file)
     end
 
     self.disc_model.Word_s, self.disc_model.Mask_s,
-    self.disc_model.Left_t, self.disc_model.Padding_s = self.disc_model.Data:get_batch(Source)
+    self.disc_model.Left_t, self.disc_model.Padding_s = self.disc_model.dataset:get_batch(Source)
 
     for i, v in pairs(self.disc_model.Word_s) do
         v = v:cuda()
@@ -186,6 +186,8 @@ function RLModel:trainDistModel(open_train_file)
 end
 
 function RLModel:train()
+    logger.info('training DisModel %d times', self.params.dSteps)
+
     self.iter = 0
 
     while true do
@@ -213,7 +215,6 @@ function RLModel:train()
                 self:save(batch_n)
             end
 
-            logger.info('training DisModel %d times', self.params.dSteps)
             for i = 1, self.params.dSteps do
                 self.disc_model.mode = "train"
                 End = self:trainDistModel(open_train_file)
@@ -231,8 +232,7 @@ function RLModel:train()
                     end
 
                     dis_pred = torch.exp(dis_pred)
-                    local reward = dis_pred:sub(
-                        1 + self.generate_model.params.batch_size,
+                    local reward = dis_pred:sub(1 + self.generate_model.params.batch_size,
                         2 * self.generate_model.params.batch_size, 1, 1)
 
                     self.generate_model:Integrate(true)
@@ -318,7 +318,7 @@ function RLModel:MonteCarloReward()
         end
 
         self.disc_model.Word_s, self.disc_model.Mask_s,
-        self.disc_model.Left_t, self.disc_model.Padding_s = self.disc_model.Data:get_batch(Source)
+        self.disc_model.Left_t, self.disc_model.Padding_s = self.disc_model.dataset:get_batch(Source)
 
         for i, v in pairs(self.disc_model.Word_s) do
             v = v:cuda()
