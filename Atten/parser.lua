@@ -33,9 +33,8 @@ local function parse_args()
     logger.info('Parsing cmdline arguments...')
     local params = cmd:parse(arg)
 
-    params.save_prefix = params.saveFolder .. "/model"
-    params.save_params_file = params.saveFolder .. "/params"
-    params.output_file = params.saveFolder .. "/log"
+    params.save_prefix = path.join(params.saveFolder, "model")
+    params.save_params_file = path.join(params.saveFolder, "params")
 
     if not path.isdir(params.saveFolder) then
         logger.info('mkdir %s', params.saveFolder)

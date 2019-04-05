@@ -4,7 +4,7 @@ require 'Atten/Model'
 local logger = logroll.print_logger()
 
 -- Inherit from AttenModel.
-local Decoder, AttenModel = torch.class('Decoder', 'AttenModel')
+local Decoder, parent = torch.class('Decoder', 'AttenModel')
 local Dataset = require('Atten/Dataset')
 
 
@@ -69,7 +69,7 @@ function Decoder:LoadMMIModel()
     params.onlyPred = true
 
     logger.info('Creating MMI model...')
-    self.MMI_model = AttenModel.new(params)
+    self.MMI_model = parent.new(params)
     self.MMI_model.mode = "test"
 
     filename = self.params.MMI_model_file

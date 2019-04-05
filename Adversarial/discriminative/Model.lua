@@ -1,18 +1,26 @@
+require 'logroll'
 require "cutorch"
 require "nn"
 require 'cunn'
 require "nngraph"
 
 
-local DisData = required('Adversarial/discriminative/Data')
+local logger = logroll.print_logger()
+local DisData = require('Adversarial/discriminative/Data')
 local DisModel = torch.class('DisModel')
 
 
 function DisModel:__init(params)
+    logger.info('Creating DisData...')
     self.Data = DisData.new(params)
     self.params = params
+
+    logger.info('Creating word-level LSTM...')
     self.lstm_word = self:lstm_(true)
+
+    logger.info('Creating sentence-level LSTM...')
     self.lstm_sen = self:lstm_(false)
+
     self.lstms_word = {}
     self.store_word = {}
 
@@ -28,11 +36,6 @@ function DisModel:__init(params)
     self.Modules[#self.Modules + 1] = self.lstm_word
     self.Modules[#self.Modules + 1] = self.lstm_sen
     self.Modules[#self.Modules + 1] = self.softmax
-
-    assert(self.params.output_file ~= nil)
-    if self.params.output_file ~= "" then
-        self.output = assert(io.open(self.params.output_file, "w"), 'cannot open file')
-    end
 end
 
 local function copy(A)
@@ -64,6 +67,7 @@ function DisModel:clone_(A)
 end
 
 function DisModel:readModel()
+    logger.info('loading model weights from %s', self.params.model_file)
     local file = torch.DiskFile(self.params.model_file, "r"):binary()
     local model_params = file:readObject()
     file:close()
@@ -74,7 +78,7 @@ function DisModel:readModel()
             parameter[j]:copy(model_params[i][j])
         end
     end
-    print("read model done")
+    logger.info("read model done")
 end
 
 function DisModel:save()
@@ -83,10 +87,12 @@ function DisModel:save()
         params[i] = self.Modules[i]:parameters()
     end
 
-    local filename = path.join(self.params.save_model_path, string.format('iter%d', self.iter))
+    local filename = path.join(self.params.saveFolder, string.format('iter%d', self.iter))
+    logger.info('saving model weights to %s', filename)
     local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(params)
     file:close()
+    logger.info('save model done')
 end
 
 function DisModel:saveParams()
@@ -96,6 +102,7 @@ function DisModel:saveParams()
 end
 
 function DisModel:model_forward()
+    logger.info('forward pass')
     self.last = {}
     for i = 1, #self.Word_s do
         for t = 1, self.Word_s[i]:size(2) do
@@ -169,6 +176,8 @@ function DisModel:model_forward()
 end
 
 function DisModel:model_backward()
+    logger.info('backward pass')
+
     local softmax_output = self.softmax:forward({ self.softmax_h, self.labels })
     if self.mode == "train" then
         local dh = self.softmax:backward({ self.softmax_h, self.labels },
@@ -316,15 +325,16 @@ function DisModel:lstm_(isWordLevel)
 end
 
 function DisModel:test()
+    logger.info('testing...')
     local open_pos_train_file
     local open_neg_train_file
 
     if self.mode == "dev" then
-        open_pos_train_file = assert(io.open(self.params.pos_dev_file, "r"), 'cannot open file')
-        open_neg_train_file = assert(io.open(self.params.neg_dev_file, "r"), 'cannot open file')
+        open_pos_train_file = assert(io.open(self.params.pos_dev_file, "r"), 'cannot open pos_dev_file')
+        open_neg_train_file = assert(io.open(self.params.neg_dev_file, "r"), 'cannot open neg_dev_file')
     elseif self.mode == "test" then
-        open_pos_train_file = assert(io.open(self.params.pos_test_file, "r"), 'cannot open file')
-        open_neg_train_file = assert(io.open(self.params.neg_test_file, "r"), 'cannot open file')
+        open_pos_train_file = assert(io.open(self.params.pos_test_file, "r"), 'cannot open pos_test_file')
+        open_neg_train_file = assert(io.open(self.params.neg_test_file, "r"), 'cannot open neg_test_file')
     end
 
     local End = 0
@@ -365,14 +375,19 @@ function DisModel:test()
 
     open_pos_train_file:close()
     open_neg_train_file:close()
-    print(right_instance / total_instance, ppl / batch_n)
 
-    if self.params.output_file ~= "" then
-        self.output:write("iter  " .. (right_instance / total_instance) .. "\n")
-    end
+    local accuracy = right_instance / total_instance
+    local batch_ppl = ppl / batch_n
+
+    logger.info('Epoch: %d', self.iter)
+    logger.info('right_instance: %d', right_instance)
+    logger.info('total_instance: %d', total_instance)
+    logger.info('accuracy: %f', accuracy)
+    logger.info('batch_ppl: %f', batch_ppl)
 end
 
 function DisModel:update()
+    logger.info('update...')
     local lr
     if self.lr ~= nil then
         lr = self.lr
@@ -405,6 +420,7 @@ function DisModel:clear()
 end
 
 function DisModel:train()
+    logger.info('training...')
     if self.params.saveModel then
         self:saveParams()
     end
@@ -412,15 +428,14 @@ function DisModel:train()
     local timer = torch.Timer()
     self.iter = 0
     self.lr = self.params.alpha
+
+    logger.info('initial testing')
     self.mode = "test"
     self:test()
 
     while true do
+        logger.info('Epoch: %d', self.iter)
         self.iter = self.iter + 1
-        if self.params.output_file ~= "" then
-            self.output:write("iter  " .. self.iter .. "\n")
-        end
-        print("iter  " .. self.iter)
 
         local start_halving = false
         if self.iter > self.params.start_halve then
@@ -430,8 +445,8 @@ function DisModel:train()
             self.lr = self.lr * 0.5
         end
 
-        local open_pos_train_file = assert(io.open(self.params.pos_train_file, "r"), 'cannot open file')
-        local open_neg_train_file = assert(io.open(self.params.neg_train_file, "r"), 'cannot open file')
+        local open_pos_train_file = assert(io.open(self.params.pos_train_file, "r"), 'cannot open pos_train_file')
+        local open_neg_train_file = assert(io.open(self.params.neg_train_file, "r"), 'cannot open neg_train_file')
 
         local End = 0
         local batch_n = 1
@@ -468,13 +483,10 @@ function DisModel:train()
 
         self.mode = "test"
         self:test()
+
         if self.params.saveModel then
             self:save()
         end
-    end
-
-    if self.params.output_file ~= "" then
-        self.output:close()
     end
 end
 

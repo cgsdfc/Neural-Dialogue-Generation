@@ -5,23 +5,23 @@ local function parse_args()
     cmd:option("-dropout", 0.2, "dropout rate")
 
     -- Positive and Negative datasets for train, dev and test.
-    cmd:option("-pos_train_file", "../data/t_given_s_train.txt",
+    cmd:option("-pos_train_file", "./data/t_given_s_train.txt",
         "human generated training examples (positive example)")
 
-    cmd:option("-neg_train_file", "../data/decoded_train.txt",
+    cmd:option("-neg_train_file", "./data/decoded_train.txt",
         "machine generated training examples (negative example)")
 
-    cmd:option("-pos_dev_file", "../data/t_given_s_dev.txt",
+    cmd:option("-pos_dev_file", "./data/t_given_s_dev.txt",
         "human generated dev examples (positive example)")
 
-    cmd:option("-neg_dev_file", "../data/decoded_dev.txt",
+    cmd:option("-neg_dev_file", "./data/decoded_dev.txt",
         "machine generated dev examples (negative example)")
 
-    cmd:option("-pos_test_file", "../data/t_given_s_test.txt",
+    cmd:option("-pos_test_file", "./data/t_given_s_test.txt",
         "human generated test examples (positive example)")
 
-    cmd:option("-neg_test_file", "../data/decoded_test.txt",
-        "human generated test examples (negative example)")
+    cmd:option("-neg_test_file", "./data/decoded_test.txt",
+        "machine generated test examples (negative example)")
 
     cmd:option("-source_max_length", 50, "maximum sequence length")
 
@@ -37,21 +37,18 @@ local function parse_args()
     cmd:option("-dialogue_length", 2,
         "the number of turns for a dialogue. the model supports multi-turn dialgoue classification")
 
-    cmd:option("-save_model_path", "save",
-        "path for saving a trained discriminative model")
+    cmd:option("-saveFolder", "save", "the folder to save models and parameters")
 
-    cmd:option("-save_params_file", "save/params",
-        "path for saving input hyperparameters")
-
-    cmd:option("-output_file", "", "")
-    cmd:option("-gpu_index", 2, "")
+    cmd:option("-gpu_index", 2, "which GPU to use")
 
     cmd:option("-saveModel", true, "whether to save the model")
 
     local params = cmd:parse(arg)
-    if not path.isdir(params.save_model_path) then
-        paths.mkdir(params.save_model_path)
+    if not path.isdir(params.saveFolder) then
+        paths.mkdir(params.saveFolder)
     end
+
+    params.save_params_file = path.join(params.saveFolder, 'params')
 
     print(params)
     return params;
