@@ -1,5 +1,7 @@
 require "torchx"
+require 'logroll'
 
+local logger = logroll.print_logger()
 local Dataset = torch.class('Dataset')
 
 

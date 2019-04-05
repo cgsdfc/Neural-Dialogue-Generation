@@ -11,6 +11,13 @@ local RLModel = torch.class('RLModel')
 
 
 function RLModel:__init(params)
+    params.save_params_file = path.join(params.saveFolder, 'params')
+    params.output_file = path.join(params.saveFolder, 'log')
+
+    if not path.isdir(params.saveFolder) then
+        logger.info('mkdir %s', params.saveFolder)
+        paths.mkdir(params.saveFolder)
+    end
     self.params = params
 
     local filename = self.params.generate_params
@@ -27,7 +34,7 @@ function RLModel:__init(params)
     generate_params.MonteCarloExample_N = self.params.MonteCarloExample_N
     generate_params.max_length = 40
     generate_params.min_length = 0
-    generate_params.dictPath = "./data/movie_25000"
+    generate_params.dictPath = "data/movie_25000"
     generate_params.output_source_target_side_by_side = true
     generate_params.PrintOutIllustrationSample = true
     generate_params.beam_size = 1
@@ -36,6 +43,16 @@ function RLModel:__init(params)
     generate_params.train_file = self.params.trainData
     generate_params.dev_file = self.params.devData
     generate_params.test_file = self.params.testData
+
+    -- For GenModel to know where to save things.
+    generate_params.saveFolder = path.join(self.params.saveFolder, 'gen')
+    generate_params.save_prefix = path.join(generate_params.saveFolder, 'model')
+    generate_params.save_params_file = path.join(generate_params.saveFolder, 'params')
+
+    if not path.isdir(generate_params.saveFolder) then
+        logger.info('mkdir %s', generate_params.saveFolder)
+        paths.mkdir(generate_params.saveFolder)
+    end
 
     logger.info("generative_params:")
     logger.info(generate_params)
@@ -59,6 +76,9 @@ function RLModel:__init(params)
     disc_params.devData = self.params.devData
     disc_params.testData = self.params.testData
 
+    -- For DisModel to know where to save things.
+    disc_params.saveFolder = path.join(self.params.saveFolder, 'dis')
+
     logger.info('disc_params:')
     logger.info(disc_params)
 
@@ -71,7 +91,8 @@ function RLModel:__init(params)
 
     self.base_line_sum = 0
     self.base_line_n = 0
-    self.log_ = assert(io.open(self.params.output_file, "w"), 'cannot open output_file')
+    self.log_ = assert(io.open(self.params.output_file, "w"),
+        'cannot open output_file')
 
     if self.params.baseline and self.params.baselineType == "critic" then
         self.baseline = nn.Linear(self.params.dimension, 1)
@@ -83,55 +104,35 @@ function RLModel:__init(params)
     end
 end
 
-function RLModel:save(batch_n)
-    local params = {}
-    logger.info('collecting weights of GenModel...')
-    for i = 1, #self.generate_model.Modules do
-        params[i] = self.generate_model.Modules[i]:parameters()
+
+function RLModel:save()
+    local models_to_save = { self.generate_model, self.disc_model }
+    for i, model in ipairs(models_to_save) do
+        logger.info('Saving weights for %s', model)
+        model:save(self.iter)
+        logger.info('Saving params for %s', model)
+        model:saveParams()
     end
 
-    local filename
-    if batch_n ~= nil then
-        filename = string.format('%s_generate_iter_%d_batch_%d', self.params.save_prefix, self.iter, batch_n)
-    else
-        filename = string.format('%s_generate_iter_%d', self.params.save_prefix, self.iter)
-    end
-
-    local file = torch.DiskFile(filename, 'w'):binary()
-    logger.info('saving weights to %s', filename)
-    file:writeObject(params)
-    file:close()
-
-    local params = {}
-    logger.info('collecting weights of DisModel...')
-    for i = 1, #self.disc_model.Modules do
-        params[i] = self.disc_model.Modules[i]:parameters()
-    end
-
-    if batch_n ~= nil then
-        filename = string.format('%s_discriminate_iter_%d_batch_%d', self.params.save_prefix, self.iter, batch_n)
-    else
-        filename = string.format('%s_discriminate_iter_%d', self.params.save_prefix, self.iter)
-    end
-
-    file = torch.DiskFile(filename, 'w'):binary()
-    logger.info('saving weights to %s', filename)
-    file:writeObject(params)
+    local filename = self.params.save_params_file
+    local file = torch.DiskFile(filename, "w"):binary()
+    logger.info('Saving params for %s to %s', self, filename)
+    file:writeObject(self.params)
     file:close()
 end
 
 function RLModel:decodeSample()
-    logger.info('Sampling...')
+    logger.info('Using sampling')
     self.generate_model.params.setting = "sampling"
     self.generate_model:DecodeIllustrationSample(self.log_)
 
-    logger.info('Beam Search...')
+    logger.info('Using beam search')
     self.generate_model.params.setting = "BS"
     self.generate_model:DecodeIllustrationSample(self.log_)
     self.generate_model.params.setting = "sampling"
 end
 
-function RLModel:trainDistModel(open_train_file)
+function RLModel:trainD(open_train_file)
     local End = 0
     self.generate_model:clear()
 
@@ -192,39 +193,42 @@ function RLModel:train()
         logger.info('Epoch: %d', self.iter)
         self.iter = self.iter + 1
 
-        local open_train_file = assert(io.open(self.params.trainData, "r"), 'cannot open trainData')
-        local batch_n = 0
+        local open_train_file = assert(io.open(self.params.trainData, "r"),
+            'cannot open trainData')
         local End = 0
 
+        if self.iter % self.params.logFreq == 0 then
+            self.log_:write(string.format('Epoch: %d\n', self.iter))
+            logger.info('decoding samples...')
+            self:decodeSample()
+
+            logger.info('validation...')
+            self.generate_model.mode = "test"
+            self.generate_model:test()
+
+            logger.info('saving models...')
+            self:save()
+        end
+
+        local batch_n = 0
         while End == 0 do
-            local timer = torch.Timer()
-            local time1 = timer:time().real
             batch_n = batch_n + 1
-
-            if batch_n % (5 * self.params.logFreq) == 0 then
-                logger.info(self.params)
-            end
-
-            if batch_n % self.params.logFreq == 0 then
-                self.log_:write("batch_n  " .. batch_n .. "\n")
-                self:decodeSample()
-                self.generate_model.mode = "test"
-                self.generate_model:test()
-                self:save(batch_n)
-            end
-
+            logger.info('train DisModel...')
             for i = 1, self.params.dSteps do
+                logger.info('D-epoch: %d', i)
                 self.disc_model.mode = "train"
-                End = self:trainDistModel(open_train_file)
+                End = self:trainD(open_train_file)
                 if End == 1 then
                     break
                 end
             end
 
             if End == 0 then
+                logger.info('train GenModel...')
                 for i = 1, self.params.gSteps do
+                    logger.info('G-epoch: %d', i)
                     self.disc_model.mode = "test"
-                    local End, dis_pred = self:trainDistModel(open_train_file)
+                    local End, dis_pred = self:trainD(open_train_file)
                     if End == 1 then
                         break
                     end
@@ -233,16 +237,18 @@ function RLModel:train()
                     local reward = dis_pred:sub(1 + self.generate_model.params.batch_size,
                         2 * self.generate_model.params.batch_size, 1, 1)
 
+                    logger.info('Integrate...')
                     self.generate_model:Integrate(true)
                     if not self.params.vanillaReinforce then
                         self:MonteCarloReward()
                     end
 
+                    logger.info('Reinforce...')
                     self:Reinforce(reward)
                 end
 
                 if self.params.TeacherForce then
-                    logger.info('applying teacher forcing...')
+                    logger.info('Teacher forcing...')
                     self.generate_model:Integrate(false)
                     self.generate_model:clear()
                     self.generate_model.mode = "train"
@@ -251,13 +257,21 @@ function RLModel:train()
                     self.generate_model:update()
                 end
             end
+        end
 
-            local time2 = timer:time().real
-            logger.info('Epoch time: %.4f seconds', time2)
+        open_train_file:close()
+
+        if self.params.saveModel then
+            self:save()
+        end
+
+        --        self.log_:close()
+
+        if self.iter == self.params.max_iter then
+            break
         end
     end
 end
-
 
 function RLModel:Reinforce(reward)
     reward = torch.reshape(reward, reward:size(1))
@@ -340,6 +354,5 @@ function RLModel:MonteCarloReward()
         end
     end
 end
-
 
 return RLModel

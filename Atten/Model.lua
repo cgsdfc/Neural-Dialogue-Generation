@@ -14,8 +14,16 @@ local logger = logroll.print_logger()
 
 
 function AttenModel:__init(params)
-    self.dataset = Dataset.new(params)
+    params.save_prefix = path.join(params.saveFolder, "model")
+    params.save_params_file = path.join(params.saveFolder, "params")
+
+    if not path.isdir(params.saveFolder) then
+        logger.info('mkdir %s', params.saveFolder)
+        paths.mkdir(params.saveFolder)
+    end
+
     self.params = params
+    self.dataset = Dataset.new(params)
 
     self.lstm_source = self:lstm_source_()
     self.lstm_target = self:lstm_target_()
@@ -536,13 +544,14 @@ function AttenModel:update()
 end
 
 -- Save model weights.
-function AttenModel:save()
+function AttenModel:save(iter)
+    iter = iter or self.iter
     local weights = {}
     for i = 1, #self.Modules do
         weights[i] = self.Modules[i]:parameters()
     end
 
-    local filename = string.format('%s%d', self.params.save_prefix, self.iter)
+    local filename = string.format('%s%d', self.params.save_prefix, iter)
     logger.info('Saving module weights to %s', filename)
 
     local file = torch.DiskFile(filename, "w"):binary()
@@ -552,7 +561,6 @@ end
 
 -- Save model hparams.
 function AttenModel:saveParams()
-    logger.info(self.params)
     local filename = self.params.save_params_file
     logger.info('Saving model hyper parameters to %s', filename)
     local file = torch.DiskFile(filename, "w"):binary()
@@ -581,16 +589,15 @@ function AttenModel:clear()
     end
 end
 
-
 function AttenModel:test()
-    local open_train_file
+    local filename
     if self.mode == "dev" then
-        logger.info('Using develop file')
-        open_train_file = assert(io.open(self.params.dev_file, "r"), 'cannot open file')
+        filename = self.params.dev_file
     elseif self.mode == "test" then
-        logger.info('Using test file')
-        open_train_file = assert(io.open(self.params.test_file, "r"), 'cannot open file')
+        filename = self.params.test_file
     end
+    logger.info('Using %s', filename)
+    local open_train_file = assert(io.open(filename, "r"), 'cannot open test_file')
 
     local sum_err_all = 0
     local total_num_all = 0
@@ -689,12 +696,11 @@ function AttenModel:train()
                 self:model_backward()
                 logger.info('Update pass')
                 self:update()
-                local time2 = timer:time().real
             end
         end
 
         open_train_file:close()
-        logger.info('Running validation test...')
+        logger.info('Running test...')
         self.mode = "test"
         self:test()
 

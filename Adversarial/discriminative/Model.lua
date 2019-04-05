@@ -11,9 +11,15 @@ local DisModel = torch.class('DisModel')
 
 
 function DisModel:__init(params)
+    params.save_params_file = path.join(params.saveFolder, 'params')
+    if not path.isdir(params.saveFolder) then
+        logger.info('mkdir %s', params.saveFolder)
+        paths.mkdir(params.saveFolder)
+    end
+    self.params = params
+
     logger.info('Creating DisData...')
     self.dataset = DisDataset.new(params)
-    self.params = params
 
     logger.info('Creating word-level LSTM...')
     self.lstm_word = self:lstm_(true)
@@ -81,13 +87,14 @@ function DisModel:readModel()
     logger.info("read model done")
 end
 
-function DisModel:save()
+function DisModel:save(iter)
     local params = {}
     for i = 1, #self.Modules do
         params[i] = self.Modules[i]:parameters()
     end
 
-    local filename = path.join(self.params.saveFolder, string.format('iter%d', self.iter))
+    local filename = path.join(self.params.saveFolder,
+        string.format('iter%d', iter or self.iter))
     logger.info('saving model weights to %s', filename)
     local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(params)
@@ -96,6 +103,7 @@ function DisModel:save()
 end
 
 function DisModel:saveParams()
+    assert(self.params.save_params_file)
     local file = torch.DiskFile(self.params.save_params_file, "w"):binary()
     file:writeObject(self.params)
     file:close()

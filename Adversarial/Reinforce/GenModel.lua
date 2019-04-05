@@ -43,8 +43,10 @@ function GenModel:GenerateSample()
 end
 
 function GenModel:__init(params)
-    self.dataset = Dataset.new(params)
+
+
     self.params = params
+    self.dataset = Dataset.new(params)
 
     self.lstm_source = self:lstm_source_()
     self.lstm_target = self:lstm_target_()
@@ -271,6 +273,5 @@ function GenModel:model_backward(vanilla)
     end
     return sum_err, total_num
 end
-
 
 return GenModel

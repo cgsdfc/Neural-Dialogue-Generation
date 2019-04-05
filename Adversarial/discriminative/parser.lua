@@ -44,12 +44,6 @@ local function parse_args()
     cmd:option("-saveModel", true, "whether to save the model")
 
     local params = cmd:parse(arg)
-    if not path.isdir(params.saveFolder) then
-        paths.mkdir(params.saveFolder)
-    end
-
-    params.save_params_file = path.join(params.saveFolder, 'params')
-
     print(params)
     return params
 end

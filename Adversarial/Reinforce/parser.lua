@@ -30,6 +30,8 @@ local function parse_args()
     cmd:option("-dimension", 512, "")
     cmd:option("-batch_size", 64, "")
     cmd:option("-sample", true, "")
+    cmd:option("-max_iter", 8, "max number of iteration")
+    cmd:option("-saveModel", true, "whether to save the trained model")
 
     cmd:option("-vanillaReinforce", false,
         "true is using vanilla reinforce model, false doing intermediate-step monte-carlo for reward estimation")
@@ -53,32 +55,6 @@ local function parse_args()
     cmd:option("-TeacherForce", true, "whether to run the teacher forcing model")
 
     local params = cmd:parse(arg)
-
-    -- *Note*: the real saveFold is a subdir of the passed-in saveFolder.
-    local function make_subdir(params)
-        local has_monte_carlo = params.vanillaReinforce and 'MC_no' or 'MC_yes'
-        local has_teacher = params.TeacherForce and 'Teacher_yes' or 'Teacher_no'
-        local has_baseline = params.baseline and 'Base_yes' or 'Base_no'
-        local lr_str = 'lr_' .. params.Timeslr
-        local subdir = stringx.join('_', { has_monte_carlo, has_teacher, has_baseline, lr_str })
-        logger.info('subdir: %s', subdir)
-        return path.join(params.saveFolder, subdir)
-    end
-
-    local subdir = make_subdir(params)
-    if not path.isdir(subdir) then
-        logger.info('mkdir %s', subdir)
-        paths.mkdir(subdir)
-    end
-
-    params.saveFolder = subdir
-    params.save_prefix = path.abspath(params.saveFolder)
-
-    params.save_prefix_dis = path.join(params.saveFolder, "dis_model")
-    params.save_prefix_generate = path.join(params.saveFolder, "generate_model")
-    params.save_params_file = path.join(params.saveFolder, "params")
-    params.output_file = path.join(params.saveFolder, "log")
-
     print(params)
     return params
 end
