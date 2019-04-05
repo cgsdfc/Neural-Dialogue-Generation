@@ -661,8 +661,12 @@ function AttenModel:train()
             batch_n = batch_n + 1
             self:clear()
             logger.info('loading training dataset %s', open_train_file)
-            End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t,
-            self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
+
+            End, self.Word_s, self.Word_t,
+            self.Mask_s, self.Mask_t,
+            self.Left_s, self.Left_t,
+            self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
+
             if End == 1 then
                 break
             end
@@ -693,6 +697,7 @@ function AttenModel:train()
         logger.info('Running validation test...')
         self.mode = "test"
         self:test()
+
         if self.params.saveModel then
             self:save()
         end

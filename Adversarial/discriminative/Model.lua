@@ -102,7 +102,6 @@ function DisModel:saveParams()
 end
 
 function DisModel:model_forward()
-    logger.info('forward pass')
     self.last = {}
     local output
 
@@ -178,8 +177,6 @@ function DisModel:model_forward()
 end
 
 function DisModel:model_backward()
-    logger.info('backward pass')
-
     local softmax_output = self.softmax:forward({ self.softmax_h, self.labels })
     if self.mode == "train" then
         local dh = self.softmax:backward({ self.softmax_h, self.labels },
@@ -327,7 +324,6 @@ function DisModel:lstm_(isWordLevel)
 end
 
 function DisModel:test()
-    logger.info('testing...')
     local open_pos_train_file
     local open_neg_train_file
 
@@ -389,7 +385,6 @@ function DisModel:test()
 end
 
 function DisModel:update()
-    logger.info('update...')
     local lr
     if self.lr ~= nil then
         lr = self.lr
@@ -424,11 +419,13 @@ end
 function DisModel:train()
     logger.info('training...')
     if self.params.saveModel then
+        logger.info('Saving hyper parameters...')
         self:saveParams()
     end
 
     local timer = torch.Timer()
     self.iter = 0
+    local start_halving = false
     self.lr = self.params.alpha
 
     logger.info('initial testing')
@@ -439,8 +436,7 @@ function DisModel:train()
         logger.info('Epoch: %d', self.iter)
         self.iter = self.iter + 1
 
-        local start_halving = false
-        if self.iter > self.params.start_halve then
+        if self.params.start_halve ~= -1 and self.iter > self.params.start_halve then
             start_halving = true
         end
         if start_halving then
@@ -452,10 +448,10 @@ function DisModel:train()
 
         local End = 0
         local batch_n = 1
+        local time1 = timer:time().real
 
         while End == 0 do
             batch_n = batch_n + 1
-            local time1 = timer:time().real
             self:clear()
             self.mode = "train"
 
@@ -483,11 +479,20 @@ function DisModel:train()
         open_pos_train_file:close()
         open_neg_train_file:close()
 
+        logger.info('Running validation test...')
         self.mode = "test"
         self:test()
 
         if self.params.saveModel then
             self:save()
+        end
+
+        local time2 = timer:time().real
+        logger.info("Batch Time: %f", time2 - time1)
+
+        if self.iter == self.params.max_iter then
+            logger.info("Done training!")
+            break
         end
     end
 end
