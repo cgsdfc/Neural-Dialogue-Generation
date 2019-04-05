@@ -17,4 +17,4 @@ cmd:option("-FuturePredictorModelFile", "", "")
 local params = cmd:parse(arg)
 paths.mkdir(params.save_model_path)
 print(params)
-return params;
+return params

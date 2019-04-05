@@ -28,4 +28,4 @@ cmd:option("-Task", "length", "length,backward")
 
 local params = cmd:parse(arg)
 print(params)
-return params;
+return params

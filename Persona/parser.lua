@@ -38,8 +38,8 @@ local function parse_args()
     cmd:option("-AddresseeNum", 10000, "number of distinct addressees")
     cmd:option("-speakerSetting", "speaker",
         [[
-        taking values of speaker or speaker_addressee;
-        speaker: only model the user who speaks;
+        taking values of speaker or speaker_addressee
+        speaker: only model the user who speaks
         speaker_addressee: modeling both the speaker and the addressee
         ]])
 

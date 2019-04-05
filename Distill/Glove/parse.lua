@@ -18,4 +18,4 @@ cmd:option("-distill_four_gram", false, "")
 
 local params = cmd:parse(arg)
 print(params)
-return params;
+return params

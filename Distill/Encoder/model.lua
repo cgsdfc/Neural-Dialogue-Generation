@@ -11,21 +11,21 @@ function model:ComputeScore()
     self.score = torch.Tensor():cuda()
     local open_train_file= assert(io.open(self.params.TrainingData, "r"), 'cannot open file')
     local End = 0
-    local num = 0;
+    local num = 0
     while End == 0 do
         End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t, self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.Data:read_train(open_train_file)
         self.mode = "decoding"
-        self.Word_s = self.Word_s:cuda();
-        self.Padding_s = self.Padding_s:cuda();
+        self.Word_s = self.Word_s:cuda()
+        self.Padding_s = self.Padding_s:cuda()
         self:model_forward()
-        local embed = torch.Tensor(self.last[2 * self.params.layers - 1]:size()):cuda():copy(self.last[2 * self.params.layers - 1]);
+        local embed = torch.Tensor(self.last[2 * self.params.layers - 1]:size()):cuda():copy(self.last[2 * self.params.layers - 1])
         embed = nn.Normalize(2):cuda():forward(embed)
         local score = nn.MM(false, true):cuda():forward({ embed, self.TopResponseEmbedding })
         score = torch.max(score, 2)
         if self.score:nDimension() == 0 then
-            self.score = score;
+            self.score = score
         else
-            self.score = torch.cat(self.score, score, 1);
+            self.score = torch.cat(self.score, score, 1)
         end
         --print(self.score:size())
         num = num + self.params.batch_size
@@ -33,14 +33,14 @@ function model:ComputeScore()
             print(num)
         end
     end
-    self.score = torch.reshape(self.score, self.score:size(1));
+    self.score = torch.reshape(self.score, self.score:size(1))
     local rank_score, index = torch.sort(self.score, true)
     local remove_indexes = {}
     for i = 1, torch.floor(num / 10) do
-        remove_indexes[index[i]] = 1;
+        remove_indexes[index[i]] = 1
     end
     --print(self.score)
-    num = 0;
+    num = 0
     local open_train= assert(io.open(self.params.TrainingData, "r"), 'cannot open file')
     local output= assert(io.open(self.params.OutputFile, "w"), 'cannot open file')
     local remove= assert(io.open("encode_a.txt", "w"), 'cannot open file')
@@ -50,7 +50,7 @@ function model:ComputeScore()
         num = num + 1
         if remove_indexes[num] == nil then
             output:write(self.score[num] .. "\n")
-            output:write(line .. "\n");
+            output:write(line .. "\n")
         else
             remove:write(self.score[num] .. "\n")
             remove:write(line .. "\n")
@@ -67,14 +67,14 @@ function model:ComputeTopResponse()
     while End == 0 do
         End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t, self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.Data:read_train(open_train_file)
         self.mode = "decoding"
-        self.Word_s = self.Word_s:cuda();
-        self.Padding_s = self.Padding_s:cuda();
+        self.Word_s = self.Word_s:cuda()
+        self.Padding_s = self.Padding_s:cuda()
         self:model_forward()
         local embed = torch.Tensor(self.last[2 * self.params.layers - 1]:size()):cuda():copy(self.last[2 * self.params.layers - 1])
         if self.TopResponseEmbedding:nDimension() == 0 then
-            self.TopResponseEmbedding = embed;
+            self.TopResponseEmbedding = embed
         else
-            self.TopResponseEmbedding = torch.cat(self.TopResponseEmbedding, embed, 1);
+            self.TopResponseEmbedding = torch.cat(self.TopResponseEmbedding, embed, 1)
         end
     end
     self.TopResponseEmbedding = nn.Normalize(2):cuda():forward(self.TopResponseEmbedding)

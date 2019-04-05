@@ -12,4 +12,4 @@ cmd:option("-model_file", "", "")
 
 local params = cmd:parse(arg)
 print(params)
-return params;
+return params

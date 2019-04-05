@@ -28,7 +28,7 @@ local function parse_args()
     cmd:option("-init_weight", 0.1, "")
     cmd:option("-alpha", 0.01, "")
     cmd:option("-start_halve", 6, "")
-    cmd:option("-max_length", 100, "");
+    cmd:option("-max_length", 100, "")
     cmd:option("-vocab_size", 25010, "")
     cmd:option("-thres", 5, "gradient clipping thres")
     cmd:option("-max_iter", 6, "max number of iteration")
@@ -51,7 +51,7 @@ local function parse_args()
     params.save_params_file = path.join(params.saveFolder, 'params')
 
     print(params)
-    return params;
+    return params
 end
 
 return parse_args
