@@ -66,6 +66,7 @@ function DisData:get_batch(Source)
 end
 
 function DisData:read_train(open_pos_train_file, open_neg_train_file)
+    assert(self.params.batch_size >= 2, 'batch_size must >= 2')
     local Source = {}
     local labels = torch.Tensor(self.params.batch_size)
     local End = 0

@@ -104,6 +104,8 @@ end
 function DisModel:model_forward()
     logger.info('forward pass')
     self.last = {}
+    local output
+
     for i = 1, #self.Word_s do
         for t = 1, self.Word_s[i]:size(2) do
             local input = {}
@@ -115,12 +117,12 @@ function DisModel:model_forward()
             else
                 if self.mode == "train" then
                     input = self:clone_(self.store_word[i][t - 1])
-                else input = self:clone_(output)
+                else
+                    input = self:clone_(output)
                 end
             end
             table.insert(input, self.Word_s[i]:select(2, t))
 
-            local output
             if self.mode == "train" then
                 self.lstms_word[i][t]:training()
                 output = self.lstms_word[i][t]:forward(input)

@@ -13,7 +13,11 @@ function model:ComputeScore()
     local End = 0
     local num = 0
     while End == 0 do
-        End, self.Word_s, self.Word_t, self.Mask_s, self.Mask_t, self.Left_s, self.Left_t, self.Padding_s, self.Padding_t = self.Data:read_train(open_train_file)
+        End, self.Word_s, self.Word_t,
+        self.Mask_s, self.Mask_t,
+        self.Left_s, self.Left_t,
+        self.Padding_s, self.Padding_t = self.Data:read_train(open_train_file)
+
         self.mode = "decoding"
         self.Word_s = self.Word_s:cuda()
         self.Padding_s = self.Padding_s:cuda()
