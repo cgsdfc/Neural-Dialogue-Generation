@@ -4,8 +4,8 @@ require "nngraph"
 require "logroll"
 
 local logger = logroll.print_logger()
-local parse_args = require("Adversarial/discriminative/parser")
-local DisModel = require("Adversarial/discriminative/Model")
+local parse_args = require("Adversarial/Discriminative/parser")
+local DisModel = require("Adversarial/Discriminative/Model")
 
 local params = parse_args()
 

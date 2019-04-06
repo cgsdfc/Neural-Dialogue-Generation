@@ -4,9 +4,9 @@ The persona_addressee model described in [2]
 
 ## Additional Options
 
-    -train_file     (default ../data/speaker_addresseet_train.txt)
-    -dev_file       (default ../data/speaker_addressee_dev.txt)
-    -test_file      (default ../data/speaker_addressee_test.txt)
+    -train_file     (default data/speaker_addresseet_train.txt)
+    -dev_file       (default data/speaker_addressee_dev.txt)
+    -test_file      (default data/speaker_addressee_test.txt)
     -SpeakerNum     (default 10000, number of distinct speakers)
     -AddresseeNum   (default 10000, number of distinct addressees)
     -speakerSetting (taking values of "speaker" or "speaker_addressee". For "speaker", only the user who speaks is modeled. For "speaker_addressee" both the speaker and the addressee are modeled)

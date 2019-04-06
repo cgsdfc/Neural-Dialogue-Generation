@@ -6,7 +6,7 @@ require 'logroll'
 
 local logger = logroll.print_logger()
 local GenModel = require('Adversarial/Reinforce/GenModel')
-local DisModel = require('Adversarial/discriminative/Model')
+local DisModel = require('Adversarial/Discriminative/Model')
 local RLModel = torch.class('RLModel')
 
 

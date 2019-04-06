@@ -12,12 +12,12 @@ Available options are:
     -batch_size     (default 128, batch size)
     -dimension      (default 512, vector dimensionality)
     -dropout        (default 0.2, dropout rate)
-    -pos_train_file     (default "./data/t_given_s_train.txt", human generated training examples)
-    -neg_train_file     (default "./data/decoded_train.txt", machine generated training examples)
-    -pos_dev_file       (default "./data/t_given_s_dev.txt", human generated dev examples)
-    -neg_dev_file       (default "./data/decoded_dev.txt", machine generated dev examples)
-    -pos_test_file      (default "./data/t_given_s_test.txt", human generated test examples)
-    -neg_test_file      (default "./data/decoded_test.txt", machine generated test examples)
+    -pos_train_file     (default "data/t_given_s_train.txt", human generated training examples)
+    -neg_train_file     (default "data/decoded_train.txt", machine generated training examples)
+    -pos_dev_file       (default "data/t_given_s_dev.txt", human generated dev examples)
+    -neg_dev_file       (default "data/decoded_dev.txt", machine generated dev examples)
+    -pos_test_file      (default "data/t_given_s_test.txt", human generated test examples)
+    -neg_test_file      (default "data/decoded_test.txt", machine generated test examples)
     -source_max_length      (default 50, maximum sequence length)
     -dialogue_length        (default 2, the number of turns for a dialogue. the model supports multi-turn dialgoue classification)
     -saveFolder             (default save/, the folder to save models and parameters)
@@ -25,7 +25,7 @@ Available options are:
 
 To the train the discriminator, run
 
-    th Adversarial/discriminative/train_dis.lua [params]
+    th Adversarial/Discriminative/train_dis.lua [params]
     
 ## Reinforce
 
@@ -33,13 +33,13 @@ Train the adversarial-reinforcement learning model in [3].
 
 Available options include:
 
-    -disc_params        (default "../discriminative/save/params", hyperparameters for the pre-trained discriminative model)
-    -disc_model         (default "../discriminative/save/iter1", path for loading a pre-trained discriminative model)
-    -generate_params    (default "./Atten/save_t_given_s/params", hyperparameters for the pre-trained generative model)
-    -generate_model     (default ./Atten/save_t_given_s/model1, path for loading a pre-trained generative model)
-    -trainData      (default "./data/t_given_s_train.txt", path for the training set)
-    -devData        (default "./data/t_given_s_train.txt", path for the dev set)
-    -testData       (default "./data/t_given_s_train.txt", path for the test set)
+    -disc_params        (default "Discriminative/save/params", hyperparameters for the pre-trained Discriminative model)
+    -disc_model         (default "Discriminative/save/iter1", path for loading a pre-trained Discriminative model)
+    -generate_params    (default "Atten/save_t_given_s/params", hyperparameters for the pre-trained generative model)
+    -generate_model     (default Atten/save_t_given_s/model1, path for loading a pre-trained generative model)
+    -trainData      (default "data/t_given_s_train.txt", path for the training set)
+    -devData        (default "data/t_given_s_train.txt", path for the dev set)
+    -testData       (default "data/t_given_s_train.txt", path for the test set)
     -saveFolder     (default "save", path for data saving)
     -vanillaReinforce       (default false, whether to use vanilla Reinforce or Monte Carlo)
     -MonteCarloExample_N    (default 5, number of tries for Monte Carlo search to approximnate the expectation)

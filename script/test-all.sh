@@ -14,7 +14,7 @@ Persona/test_persona.sh
 Persona/test_persona_speaker.sh
 Persona/test_persona_speaker_addressee.sh
 
-Adversarial/discriminative/test_train_dis.sh
+Adversarial/Discriminative/test_train_dis.sh
 Adversarial/Reinforce/test_reinforce.sh
 )
 

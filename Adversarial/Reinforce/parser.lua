@@ -6,10 +6,10 @@ local function parse_args()
     local cmd = torch.CmdLine()
 
     -- Paths for the weights and params of the GenModel and DisModel.
-    cmd:option("-disc_params", "Adversarial/discriminative/save/params",
-        "hyperparameters for the pre-trained discriminative model")
+    cmd:option("-disc_params", "Adversarial/Discriminative/save/params",
+        "hyperparameters for the pre-trained Discriminative model")
 
-    cmd:option("-disc_model", "Adversarial/discriminative/save/iter1",
+    cmd:option("-disc_model", "Adversarial/Discriminative/save/iter1",
         "path for loading a pre-trained discriminative model")
 
     cmd:option("-generate_params", "Atten/save_t_given_s/params",

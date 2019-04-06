@@ -6,7 +6,7 @@ require "nngraph"
 
 
 local logger = logroll.print_logger()
-local DisDataset = require('Adversarial/discriminative/Dataset')
+local DisDataset = require('Adversarial/Discriminative/Dataset')
 local DisModel = torch.class('DisModel')
 
 
@@ -18,7 +18,7 @@ function DisModel:__init(params)
     end
     self.params = params
 
-    logger.info('Creating DisData...')
+    logger.info('Creating DisDataset...')
     self.dataset = DisDataset.new(params)
 
     logger.info('Creating word-level LSTM...')
