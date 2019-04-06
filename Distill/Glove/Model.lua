@@ -184,18 +184,21 @@ function GloveDistiller:Distill()
     local remove_indexes = {}
 
     local num_to_remove = torch.floor(self.params.total_lines * self.params.distill_rate)
-    logger.info('number of examples to reomve: %d', num_to_remove)
+    logger.info('number of examples to remove: %d', num_to_remove)
 
     logger.info('collecting indecies to be removed')
     for i = 1, num_to_remove do
         remove_indexes[index[i]] = 1
     end
+    logger.info('examples to remove:')
+    logger.info(remove_indexes)
 
     local num = 0
     local open_train = assert(io.open(self.params.TrainingData), 'cannot open TrainingData')
     local four_gram_distill_num = 0
     local cosine_distill_num = 0
 
+    logger.info('distill begins')
     while true do
         local line = open_train:read("*line")
         if line == nil then
@@ -231,13 +234,20 @@ function GloveDistiller:Distill()
                 end
             end
         end
+        if not distill then
+            logger.info('not distilled')
+        end
 
+        local score = self.all_scores[num]
+        logger.info('cosine score for #%d: %f', num, score)
+
+        logger.info('writing to files')
         if not distill then
             output:write(line .. "\n")
-            reserve:write(self.all_scores[num] .. "\n")
+            reserve:write(score .. "\n")
             reserve:write(target .. "\n")
         else
-            remove:write(self.all_scores[num] .. "\n")
+            remove:write(score .. "\n")
             remove:write(target .. "\n")
         end
     end
