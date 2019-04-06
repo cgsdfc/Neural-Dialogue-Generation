@@ -35,12 +35,12 @@ Options include:
     -TrainingData       (path for your training data to distill)
     -TopResponseFile    (path for your extracted top frequent responses)
     -batch_size         (default 1280, batch size)
-    -save_score_file    (default "relevance_score", path for saving relevance_score for each instance in the training set)
     -distill_rate       (default 0.08, the proportion of training data to distill in this round)
     -distill_four_gram  (default true, whether to remove all training instances that share four-grams
                          with any one of the top frequent responses)
-    -loadscore          (default false, whether to load already-computed relevance scores)
-    -save_score         (default false, wehther to save relevance scores)
+    -load_score          (default false, whether to load already-computed relevance scores)
+    -save_score         (default false, whether to save relevance scores)
+    -save_score_file    (default "relevance_score", path for saving relevance_score for each instance in the training set)
 
 Compute relevance scores:
 
@@ -57,7 +57,8 @@ Distill the Data:
         -TopResponseFile <yourFileToStoreTopResponses> \
         -TrainingData <yourTrainingData> \
         -OutputFile <FileForRemainingData> \
-        -total_lines <number of lines in yourTrainingData> \
+        -total_lines <number of lines in your TrainingData> \
+        -load_score \
         -save_score_file <relevance_score>
 
 The remaining data after this round of data distillation will be stored in ``FileForRemainingData``,

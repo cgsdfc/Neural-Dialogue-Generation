@@ -4,7 +4,7 @@
 ROUND=0
 SAVE_ROOT=save/test-distill
 
-TOP_RES_FILE=$SAVE_ROOT/$ROUND/tmp/top_response3.txt
+TOP_RES_FILE=$SAVE_ROOT/$ROUND/tmp/top_response4.txt
 TRAIN_DATA=$SAVE_ROOT/$ROUND/data/t_given_s_train.txt
 OUTPUT_FILE=$SAVE_ROOT/$ROUND/tmp/distill.txt
 
@@ -18,6 +18,6 @@ th Distill/Encoder/distill.lua \
     -OutputFile $OUTPUT_FILE \
     -params_file $PARAMS_FILE \
     -model_file $MODEL_FILE \
-    -batch_size 6400 \
+    -batch_size $BATCH_SIZE \
     -gpu_index 2
 
