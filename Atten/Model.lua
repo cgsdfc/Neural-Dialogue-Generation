@@ -55,13 +55,15 @@ function AttenModel:ReadDict()
     logger.info('loading dictionary from %s', filename)
 
     self.dict = tds.hash()
-    local open = assert(io.open(filename, "r"), string.format('cannot open file %s', filename))
+    local open = assert(io.open(filename, "r"), 'cannot open dictPath')
     local index = 0
 
     while true do
         index = index + 1
         local line = open:read("*line")
-        if line == nil then break end
+        if line == nil then
+            break
+        end
         self.dict[index] = line
     end
 end
@@ -407,7 +409,6 @@ function AttenModel:model_forward()
                 output = self.lstms_t[t]:forward(lstm_input)
             else
                 self.lstms_t[1]:evaluate()
-                logger.debug(lstm_input)
                 output = self.lstms_t[1]:forward(lstm_input)
             end
 

@@ -44,7 +44,7 @@ Options include:
 
 Compute relevance scores:
 
-    th Distill/Glove/distill_glove.lua \
+    th Distill/Glove/distill.lua \
         -TopResponseFile <yourFileToStoreTopResponses> \
         -TrainingData <yourTrainingData> \
         -OutputFile <FileForRemainingData> \
@@ -53,7 +53,7 @@ Compute relevance scores:
 
 Distill the Data:
 
-    th Distill/Glove/distill_glove.lua \
+    th Distill/Glove/distill.lua \
         -TopResponseFile <yourFileToStoreTopResponses> \
         -TrainingData <yourTrainingData> \
         -OutputFile <FileForRemainingData> \
@@ -73,7 +73,7 @@ Other than input parameters in Glove, the path for a pre-trained Seq2Seq model n
 
 To run the model:
 
-    th Distill/Encoder/distill_encode.lua \
+    th Distill/Encoder/distill.lua \
         -TopResponseFile <yourFileToStoreTopResponses> \
         -TrainingData <yourTrainingData> \
         -OutputFile <FileForRemainingData> \

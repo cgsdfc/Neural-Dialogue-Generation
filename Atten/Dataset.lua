@@ -80,14 +80,14 @@ function Dataset:get_batch(Sequences, isSource)
     return Words, Mask, Left, Padding
 end
 
-
+-- This method will discard the last batch if its size < batch_size.
 function Dataset:read_train(open_train_file)
     local Source = {}
     local Target = {}
     local i = 0
     local End = 0
 
-    while 1 == 1 do
+    while true do
         i = i + 1
         local str = open_train_file:read("*line")
         if str == nil then

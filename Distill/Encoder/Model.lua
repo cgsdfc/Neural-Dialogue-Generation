@@ -1,10 +1,16 @@
+require 'logroll'
 require 'Decode/Decoder'
 
-local EncoderDistiller = torch.class('DecoderDistiller', 'Decoder')
+local logger = logroll.print_logger()
+local EncoderDistiller = torch.class('EncoderDistiller', 'Decoder')
 
 function EncoderDistiller:Distill()
+    logger.info('Distillation begins...')
+    logger.info('Computing embeddings for top responses...')
     self:ComputeTopResponse()
     self:ComputeScore()
+    self:RemoveExamples()
+    logger.info('Distillation done!')
 end
 
 function EncoderDistiller:ComputeScore()
@@ -13,90 +19,152 @@ function EncoderDistiller:ComputeScore()
     local End = 0
     local num = 0
 
+    -- This loop is similar to that of ComputeTopResponse().
+    -- It uses the encoder part of the seq2seq model to generate embeddings for reponses in the
+    -- training dataset and the cosine similarity score.
+    logger.info('Computing embeddings for training responses and consine similarity score...')
     while End == 0 do
         End, self.Word_s, self.Word_t,
         self.Mask_s, self.Mask_t,
         self.Left_s, self.Left_t,
-        self.Padding_s, self.Padding_t = self.Data:read_train(open_train_file)
+        self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
 
         self.mode = "decoding"
         self.Word_s = self.Word_s:cuda()
         self.Padding_s = self.Padding_s:cuda()
         self:model_forward()
 
+        logger.info('Computing embedding for training response: %s', self:IndexToWord(self.Word_s))
         local embed = torch.Tensor(self.last[2 * self.params.layers - 1]:size()):cuda():copy(self.last[2 * self.params.layers - 1])
+
+        logger.info('Normalizing embedding...')
         embed = nn.Normalize(2):cuda():forward(embed)
 
+        -- Rather than collecting the embedding into a list, it is used immediately to compare with the embeddings
+        -- of a top response.
+
+        -- # MM document
+        -- MM is *Matric Multiplication*. Why not MatMul?
+        -- MM:__init(transA, transB)
+        --
+        -- function MM:updateOutput(input)
+        -- assert(#input == 2, 'input must be a pair of minibatch matrices')
+
+        -- The dot product of two normalized vectors are their cosine similarity.
+        -- The max of them denotes the most similar pair.
+
+        -- Note: it computes scores between *one* training embedding and *all* top embeddings, using MM.
+        logger.info('Computing cosine similarity between %s and %s', embed, self.TopResponseEmbedding)
         local score = nn.MM(false, true):cuda():forward({ embed, self.TopResponseEmbedding })
         score = torch.max(score, 2)
 
+        -- collect the score into self.score.
         if self.score:nDimension() == 0 then
             self.score = score
         else
             self.score = torch.cat(self.score, score, 1)
         end
 
-        --print(self.score:size())
         num = num + self.params.batch_size
         if num % 1280000 == 0 then
-            print(num)
+            logger.info('Processing the %d batch', num / self.params.batch_size)
         end
     end
 
+    logger.info('Determine the examples to remove...')
+    -- Flatten self.score to eliminate the B dim.
     self.score = torch.reshape(self.score, self.score:size(1))
+    logger.info('Sorting consine similarity scores...')
     local rank_score, index = torch.sort(self.score, true)
+
+    -- remove_indexes[i] == 1 if i is to be removed.
     local remove_indexes = {}
-    for i = 1, torch.floor(num / 10) do
+    local num_to_remove = torch.floor(num / 10)
+    logger.info('The number of examples to be removed: %d', num_to_remove)
+
+    -- Remove the top 10% not the all.
+    for i = 1, num_to_remove do
         remove_indexes[index[i]] = 1
     end
+    self.remove_indexes = remove_indexes
+end
 
-    --print(self.score)
-    num = 0
-    local open_train = assert(io.open(self.params.TrainingData, "r"), 'cannot open TrainingData')
+function EncoderDistiller:RemoveExamples()
+    logger.info('Removing examples...')
+
+    -- Original training dataset.
+    local train_file = assert(io.open(self.params.TrainingData, "r"), 'cannot open TrainingData')
+
+    -- Filtered dataset.
     local output = assert(io.open(self.params.OutputFile, "w"), 'cannot open OutputFile')
-    local remove = assert(io.open("encode_a.txt", "w"), 'cannot open remove file')
+    logger.info('Writing filtered data to %s', self.params.OutputFile)
 
+    -- Relevance scores.
+    local score_file
+    if self.params.save_score then
+        score_file = assert(io.open(self.params.save_score_file, 'w'), 'cannot open save_score_file')
+        logger.info('Writing score to %s', self.params.save_score_file)
+    end
+
+    local num = 0
     while true do
-        local line = open_train:read("*line")
-        if line == nil then break end
+        local line = train_file:read("*line")
+        if line == nil then
+            break
+        end
         num = num + 1
-        if remove_indexes[num] == nil then
-            output:write(self.score[num] .. "\n")
+        if score_file then
+            score_file:write(self.score[num] .. '\n')
+        end
+        if self.remove_indexes[num] == nil then
             output:write(line .. "\n")
         else
-            remove:write(self.score[num] .. "\n")
-            remove:write(line .. "\n")
+            logger.info('Removed example: %s', line)
         end
     end
 
     output:close()
-    remove:close()
+    if self.params.save_score then
+        score_file:close()
+    end
 end
 
+-- Compute the vector representation of the top responses. (TopResponseEmbedding)
 function EncoderDistiller:ComputeTopResponse()
-    local open_train_file = assert(io.open(self.params.TopResponseFile, "r"), 'cannot open TopResponseFile')
+    local open_top_response_file = assert(io.open(self.params.TopResponseFile, "r"),
+        'cannot open TopResponseFile')
     local End = 0
+    -- A list to hold all top response embeddings.
     self.TopResponseEmbedding = torch.Tensor():cuda()
 
     while End == 0 do
         End, self.Word_s, self.Word_t,
         self.Mask_s, self.Mask_t,
         self.Left_s, self.Left_t,
-        self.Padding_s, self.Padding_t = self.Data:read_train(open_train_file)
+        self.Padding_s, self.Padding_t = self.dataset:read_train(open_top_response_file)
 
+        print(self.Word_s)
+        print(self.Word_t)
+
+        -- in decoding mode, only source is considered. target is not important.
         self.mode = "decoding"
         self.Word_s = self.Word_s:cuda()
         self.Padding_s = self.Padding_s:cuda()
+        -- Use the encoder output as embedding.
         self:model_forward()
 
         local embed = torch.Tensor(self.last[2 * self.params.layers - 1]:size()):cuda():copy(self.last[2 * self.params.layers - 1])
+
+        -- collect in a list.
         if self.TopResponseEmbedding:nDimension() == 0 then
+            -- initial case: empty list.
             self.TopResponseEmbedding = embed
         else
+            -- append to the list.
             self.TopResponseEmbedding = torch.cat(self.TopResponseEmbedding, embed, 1)
         end
     end
-
+    -- Normalize each vector, which lives in Dim-2.
     self.TopResponseEmbedding = nn.Normalize(2):cuda():forward(self.TopResponseEmbedding)
 end
 

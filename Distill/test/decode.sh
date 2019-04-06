@@ -7,9 +7,10 @@ ROUND=0
 MAX_DECODED_NUM=1000000
 BATCH_SIZE=128
 
-SAVE_ROOT=save/test-distill/
+SAVE_ROOT=save/test-distill
+
 MODEL_FILE=$SAVE_ROOT/$ROUND/model/model8
-PARAMS_FILE=$SAVE_ROOT$ROUND/model/params
+PARAMS_FILE=$SAVE_ROOT/$ROUND/model/params
 
 INPUT_FILE=$SAVE_ROOT/$ROUND/data/t_given_s_train.txt
 OUTPUT_FILE=$SAVE_ROOT/$ROUND/tmp/decode.txt
@@ -23,4 +24,5 @@ th Decode/decode.lua \
         -InputFile $INPUT_FILE \
         -OutputFile $OUTPUT_FILE \
         -batch_size ${BATCH_SIZE} \
-        -max_decoded_num ${MAX_DECODED_NUM}
+        -max_decoded_num ${MAX_DECODED_NUM} \
+        -gpu_index 2

@@ -1,3 +1,4 @@
+# This script turns a a list of number to strings.
 import sys
 
 
@@ -11,7 +12,7 @@ def NumToString(numString, Dict):
         else:
             String = String + " " + str(Dict[int(item)])
     return String
-        
+
 
 A = open(sys.argv[1], "r")
 Dict = {}

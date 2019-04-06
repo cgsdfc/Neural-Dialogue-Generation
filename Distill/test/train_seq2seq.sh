@@ -6,7 +6,7 @@
 # for the next round.
 
 ROUND=0
-SAVE_ROOT=save/test-distill/
+SAVE_ROOT=save/test-distill
 
 TRAIN_FILE=${SAVE_ROOT}/${ROUND}/data/t_given_s_train.txt
 DEV_FILE=${SAVE_ROOT}/${ROUND}/data/t_given_s_dev.txt
@@ -15,11 +15,11 @@ SAVE_FOLDER=${SAVE_ROOT}/${ROUND}/model
 
 test -f $TRAIN_FILE || exit 1
 
-mkdir -p ${SAVE_ROOT}/${ROUND}/data
 mkdir -p ${SAVE_ROOT}/${ROUND}/model
 
 th Atten/train_atten.lua \
     -train_file ${TRAIN_FILE} \
     -dev_file ${DEV_FILE} \
     -test_file ${TEST_FILE} \
-    -saveFolder ${SAVE_FOLDER}
+    -saveFolder ${SAVE_FOLDER} \
+    -gpu_index 2
