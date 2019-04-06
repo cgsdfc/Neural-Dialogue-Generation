@@ -2,18 +2,19 @@ require "cutorch"
 require "nn"
 require 'cunn'
 require "nngraph"
-local stringx = require('pl.stringx')
-cutorch.manualSeed(123)
-local data = torch.reload("../../Atten/data")
 
-local model = {}
 
-function model:Initial(params)
+local GloveDistiller = torch.class('GloveDistiller')
+
+
+function GloveDistiller:__init(params)
     self.params = params
     local file = torch.DiskFile(self.params.WordMatrix, "r"):binary()
     local embedding = file:readObject()
+    file:close()
+
     self.LookUpTable = nn.LookupTable(embedding:size()):cuda()
-    local parameter, _ = self.LookUpTable:parameters()
+    local parameter = self.LookUpTable:parameters()
     parameter[1]:copy(embedding:cuda())
 
     self.getMatrix = nn.Sequential()
@@ -25,41 +26,50 @@ function model:Initial(params)
 
     self.top_response_lines = self:ReadFile(self.params.TopResponseFile)
     self.top_response_embedding = self:lines2Embedding(self.top_response_lines)
+
     if self.params.loadscore then
         local file = torch.DiskFile(self.params.save_score_file, "r"):binary()
         self.all_scores = file:readObject()
+        file:close()
         self.all_scores = self.all_scores:double()
     end
 end
 
-function model:lines2Embedding(lines)
+function GloveDistiller:lines2Embedding(lines)
     local max_length = -100
     local All_tensors = {}
+
     for i, str in pairs(lines) do
         local split = stringx.split(str, " ")
         if #split > max_length then
             max_length = #split
         end
+
         local tensor = torch.Tensor(1, #split):zero()
         for j = 1, #split do
             tensor[1][j] = tonumber(split[j])
         end
         All_tensors[#All_tensors + 1] = tensor
     end
+
     local matrix = torch.Tensor(#lines, max_length):fill(1)
     for i, tensor in pairs(All_tensors) do
         matrix:sub(i, i, 1, tensor:size(2)):copy(tensor)
     end
+
     local vector = self.getMatrix:forward(matrix)
     return torch.Tensor(vector:size()):copy(vector):cuda()
 end
 
-function model:LoadGram()
-    local open_= assert(io.open(self.params.TopResponseFile, "r"), 'cannot open file')
+function GloveDistiller:LoadGram()
+    local open_ = assert(io.open(self.params.TopResponseFile, "r"), 'cannot open TopResponseFile')
     self.FourGram = {}
+
     while true do
         local line = open_:read("*line")
-        if line == nil then break end
+        if line == nil then
+            break
+        end
         local t = line:find("|")
         line = line:sub(t + 1, -1)
         local G = stringx.split(line, " ")
@@ -75,27 +85,33 @@ function model:LoadGram()
     end
 end
 
-function model:ReadFile(file)
-    local open_= assert(io.open(file, "r"), 'cannot open file')
+function GloveDistiller:ReadFile(filename)
+    local file = assert(io.open(filename, "r"), 'cannot open file')
     local lines = {}
     while true do
-        local line = open_:read("*line")
-        if line == nil then break end
+        local line = file:read("*line")
+        if line == nil then
+            break
+        end
         local t = line:find("|")
         lines[#lines + 1] = line:sub(t + 1, -1)
     end
+    file:close()
     return lines
 end
 
-function model:GetScore()
-    local open_train= assert(io.open(self.params.TrainingData), 'cannot open file')
+function GloveDistiller:GetScore()
+    local open_train = assert(io.open(self.params.TrainingData), 'cannot open TrainingData')
     local current_lines = {}
-    local all_lines = {}
     self.all_scores = torch.Tensor():cuda()
     local num = 0
+
     while true do
         local line = open_train:read("*line")
-        if line == nil then break end
+        if line == nil then
+            break
+        end
+
         local splits = stringx.split(line, "|")
         local str = stringx.strip(splits[2])
         current_lines[#current_lines + 1] = str
@@ -105,6 +121,7 @@ function model:GetScore()
             local current_matrix = self:lines2Embedding(current_lines)
             local score = nn.MM(false, true):cuda():forward({ current_matrix, self.top_response_embedding })
             score = torch.max(score, 2)
+
             if self.all_scores:nDimension() == 0 then
                 self.all_scores = score
             else
@@ -112,12 +129,8 @@ function model:GetScore()
             end
             current_lines = {}
         end
-        --[[
-        if num==100000 then
-            break
-        end
-        --]]
     end
+
     self.all_scores = torch.reshape(self.all_scores, self.all_scores:size(1))
     if self.params.save_score then
         local file = torch.DiskFile(self.params.save_score_file, "w"):binary()
@@ -126,22 +139,27 @@ function model:GetScore()
     end
 end
 
-function model:Distill()
-    local output= assert(io.open(self.params.OutputFile, "w"), 'cannot open file')
-    local reserve= assert(io.open("Glove_reserve_index.txt", "w"), 'cannot open file')
-    local remove= assert(io.open("Glove_remove_index.txt", "w"), 'cannot open file')
+function GloveDistiller:Distill()
+    local output = assert(io.open(self.params.OutputFile, "w"), 'cannot open OutputFile')
+    local reserve = assert(io.open("Glove_reserve_index.txt", "w"), 'cannot open Glove_reserve_index.txt')
+    local remove = assert(io.open("Glove_remove_index.txt", "w"), 'cannot open Glove_remove_index.txt')
     local rank_score, index = torch.topk(self.all_scores, torch.floor(0.3 * self.all_scores:size(1)), true)
     local remove_indexes = {}
+
     for i = 1, torch.floor(self.params.total_lines * self.params.distill_rate) do
         remove_indexes[index[i]] = 1
     end
+
     local num = 0
-    local open_train= assert(io.open(self.params.TrainingData), 'cannot open file')
+    local open_train = assert(io.open(self.params.TrainingData), 'cannot open TrainingData')
     local four_distill_num = 0
     local cos_distill_num = 0
+
     while true do
         local line = open_train:read("*line")
-        if line == nil then break end
+        if line == nil then
+            break
+        end
         num = num + 1
         if num > self.all_scores:size(1) then
             break
@@ -166,6 +184,7 @@ function model:Distill()
                 end
             end
         end
+
         if not distill then
             output:write(line .. "\n")
             reserve:write(self.all_scores[num] .. "\n")
@@ -176,14 +195,9 @@ function model:Distill()
             remove:write(self.all_scores[num] .. "\n")
             remove:write(target .. "\n")
         end
-        --[[
-        if num==100000 then
-            break
-        end
-        --]]
     end
     print(cos_distill_num)
     print(four_distill_num)
 end
 
-return model
+return GloveDistiller
