@@ -13,8 +13,8 @@ function EncoderDistiller:Distill()
 end
 
 function EncoderDistiller:ComputeScore()
-    self.score = torch.Tensor():cuda()
     local open_train_file = assert(io.open(self.params.TrainingData, "r"), 'cannot open TrainingData')
+    self.score = torch.Tensor():cuda()
     local End = 0
     local num = 0
 
@@ -37,14 +37,11 @@ function EncoderDistiller:ComputeScore()
         self.Padding_s = self.Padding_s:cuda()
         self:model_forward()
 
-        logger.info('Computing embedding for training response')
         local embed = torch.Tensor(self.last[2 * self.params.layers - 1]:size()):cuda():copy(self.last[2 * self.params.layers - 1])
-
-        logger.info('Normalizing embedding...')
         embed = nn.Normalize(2):cuda():forward(embed)
 
-        -- Rather than collecting the embedding into a list, it is used immediately to compare with the embeddings
-        -- of a top response.
+        -- Rather than collecting the embedding into a list, it is used immediately to
+        -- compare with the embeddings of a top response.
 
         -- # MM document
         -- MM is *Matric Multiplication*. Why not MatMul?
@@ -57,7 +54,6 @@ function EncoderDistiller:ComputeScore()
         -- The max of them denotes the most similar pair.
 
         -- Note: it computes scores between *one* training embedding and *all* top embeddings, using MM.
-        logger.info('Computing cosine similarity between top response and training response')
         local score = nn.MM(false, true):cuda():forward({ embed, self.TopResponseEmbedding })
         score = torch.max(score, 2)
 
@@ -82,7 +78,7 @@ function EncoderDistiller:ComputeScore()
 
     -- remove_indexes[i] == 1 if i is to be removed.
     local remove_indexes = {}
-    local num_to_remove = torch.floor(num / 10)
+    local num_to_remove = torch.floor(num * self.params.distill_rate)
     logger.info('number of examples to be removed: %d', num_to_remove)
 
     -- Remove the top 10% not the all.
@@ -94,19 +90,21 @@ end
 
 function EncoderDistiller:RemoveExamples()
     logger.info('Removing examples...')
-
-    -- Original training dataset.
     local train_file = assert(io.open(self.params.TrainingData, "r"), 'cannot open TrainingData')
 
-    -- Filtered dataset.
-    local output = assert(io.open(self.params.OutputFile, "w"), 'cannot open OutputFile')
     logger.info('Writing filtered data to %s', self.params.OutputFile)
+    local output = assert(io.open(self.params.OutputFile, "w"), 'cannot open OutputFile')
 
-    -- Relevance scores.
     local score_file
     if self.params.save_score then
-        score_file = assert(io.open(self.params.save_score_file, 'w'), 'cannot open save_score_file')
         logger.info('Writing score to %s', self.params.save_score_file)
+        score_file = assert(io.open(self.params.save_score_file, 'w'), 'cannot open save_score_file')
+    end
+
+    local removed_file
+    if self.params.save_removed then
+        logger.info('Writing removed examples to %s', self.params.save_removed_file)
+        removed_file = assert(io.open(self.params.save_removed_file, 'w'), 'cannot open save_removed_file')
     end
 
     local num = 0
@@ -121,8 +119,8 @@ function EncoderDistiller:RemoveExamples()
         end
         if self.remove_indexes[num] == nil then
             output:write(line .. "\n")
-        else
-            logger.info('Removed example: %s', line)
+        elseif removed_file then
+            removed_file:write(line .. "\n")
         end
     end
 
@@ -130,13 +128,17 @@ function EncoderDistiller:RemoveExamples()
     if self.params.save_score then
         score_file:close()
     end
+    if self.params.save_removed then
+        removed_file:close()
+    end
 end
 
 -- Compute the vector representation of the top responses. (TopResponseEmbedding)
 function EncoderDistiller:ComputeTopResponse()
     logger.info('Computing embeddings for top responses...')
 
-    local open_top_response_file = assert(io.open(self.params.TopResponseFile, "r"), 'cannot open TopResponseFile')
+    local open_top_response_file = assert(io.open(self.params.TopResponseFile, "r"),
+        'cannot open TopResponseFile')
 
     local End = 0
     -- A list to hold all top response embeddings.
