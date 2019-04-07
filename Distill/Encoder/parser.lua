@@ -11,20 +11,12 @@ local function parse_args()
     cmd:option("-params_file", "", "hyperparameters for the pre-trained generative model")
     cmd:option("-model_file", "", " path for loading a pre-trained generative model")
 
-    cmd:option("-save_score", false, "whether to save the relevance score")
-    cmd:option("-save_removed", false, "whether to save the examples got removed")
+    cmd:option("-save_summary", false, "whether to write a summary file")
 
     local params = cmd:parse(arg)
     assert(path.isdir(params.saveFolder))
 
-    params.OutputFile = path.join(params.saveFolder, path.basename(params.TrainingData))
 
-    if params.save_score then
-        params.save_score_file = path.join(params.saveFolder, 'relevance_score.txt')
-    end
-    if params.save_removed then
-        params.save_removed_file = path.join(params.saveFolder, 'removed_examples.txt')
-    end
 
     print(params)
     return params

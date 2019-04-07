@@ -21,6 +21,4 @@ th Distill/Encoder/distill.lua \
     -model_file $MODEL_FILE \
     -batch_size $BATCH_SIZE \
     -gpu_index 2 \
-    -save_score \
-    -save_removed
-
+    -save_summary

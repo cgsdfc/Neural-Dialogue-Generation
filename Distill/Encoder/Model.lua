@@ -92,19 +92,16 @@ function EncoderDistiller:RemoveExamples()
     logger.info('Removing examples...')
     local train_file = assert(io.open(self.params.TrainingData, "r"), 'cannot open TrainingData')
 
-    logger.info('Writing filtered data to %s', self.params.OutputFile)
-    local output = assert(io.open(self.params.OutputFile, "w"), 'cannot open OutputFile')
+    local filename = path.join(self.params.saveFolder, path.basename(self.params.TrainingData))
+    logger.info('Writing filtered data to %s', filename)
+    local output = assert(io.open(filename, "w"), 'cannot open OutputFile')
 
-    local score_file
-    if self.params.save_score then
-        logger.info('Writing score to %s', self.params.save_score_file)
-        score_file = assert(io.open(self.params.save_score_file, 'w'), 'cannot open save_score_file')
-    end
-
-    local removed_file
-    if self.params.save_removed then
-        logger.info('Writing removed examples to %s', self.params.save_removed_file)
-        removed_file = assert(io.open(self.params.save_removed_file, 'w'), 'cannot open save_removed_file')
+    local summary
+    if self.params.save_summary then
+        local filename = path.join(self.params.saveFolder, 'encoder_distill_summary.csv')
+        logger.info('Writing summary to %s', filename)
+        summary = assert(io.open(filename, 'w'), 'cannot open save_score_file')
+        summary:write('Score,Distilled,Example\n')
     end
 
     local num = 0
@@ -114,22 +111,18 @@ function EncoderDistiller:RemoveExamples()
             break
         end
         num = num + 1
-        if score_file then
-            score_file:write(self.score[num] .. '\n')
+        local distill = self.remove_indexes[num] == 1
+        if summary then
+            summary:write(string.format('%f,%s,%s\n', self.score[num], distill, line))
         end
-        if self.remove_indexes[num] == nil then
+        if not distill then
             output:write(line .. "\n")
-        elseif removed_file then
-            removed_file:write(line .. "\n")
         end
     end
 
     output:close()
-    if self.params.save_score then
-        score_file:close()
-    end
-    if self.params.save_removed then
-        removed_file:close()
+    if summary then
+        summary:close()
     end
 end
 
