@@ -17,7 +17,7 @@ def find_generic_responses(filename):
         responses = list(find(f))
     logging.info('number of lines: %d', len(responses))
     counter = collections.Counter(responses)
-    return counter.most_common(FREQ_THRESHOLD)
+    return [item for item in counter.items() if item[1] >= FREQ_THRESHOLD]
 
 
 def load_dict(file):

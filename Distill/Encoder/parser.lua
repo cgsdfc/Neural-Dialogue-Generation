@@ -14,8 +14,6 @@ local function parse_args()
     cmd:option("-save_summary", false, "whether to write a summary file")
 
     local params = cmd:parse(arg)
-    assert(path.isdir(params.saveFolder))
-
     print(params)
     return params
 end

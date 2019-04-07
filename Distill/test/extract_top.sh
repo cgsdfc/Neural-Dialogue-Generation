@@ -8,6 +8,6 @@ SAVE_ROOT=save/test-distill
 OUTPUT_FILE=$SAVE_ROOT/$ROUND/tmp/top_response5.txt
 INPUT_FILE=$SAVE_ROOT/$ROUND/tmp/decode.txt
 
-python Distill/extract_top/select_top_decoded.py \
+python Distill/Extract/extract_top.py \
     $INPUT_FILE \
     $OUTPUT_FILE
