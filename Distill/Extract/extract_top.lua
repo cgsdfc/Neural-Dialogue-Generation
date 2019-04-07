@@ -39,7 +39,7 @@ local function count_occurrence(lines)
     return counter
 end
 
-local function find_generic(stat, dict)
+local function find_generic(stat, dict, freq_threshold)
     local function to_numbers(line)
         local ids = {}
         for _, str in ipairs(stringx.split(line, ' ')) do
@@ -50,7 +50,7 @@ local function find_generic(stat, dict)
 
     local output = {}
     for line, freq in pairs(stat) do
-        if freq >= FREQ_THRESHOLD then
+        if freq >= freq_threshold then
             local ids = to_numbers(line)
             table.insert(output, { ids, freq })
         end
@@ -58,11 +58,11 @@ local function find_generic(stat, dict)
     return output
 end
 
-local function extract_top(input, output, dict)
+local function extract_top(input, output, dict, freq_threshold)
     local dict = load_dictionary(dict)
     local lines = load_response_file(input)
     local stat = count_occurrence(lines)
-    local generic = find_generic(stat, dict)
+    local generic = find_generic(stat, dict, freq_threshold)
 
     output = assert(io.open(output, 'w'), 'cannot open output')
     for _, data in ipairs(generic) do

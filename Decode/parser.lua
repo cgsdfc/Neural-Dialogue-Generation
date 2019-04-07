@@ -11,6 +11,7 @@ local function parse_args()
     cmd:option("-dictPath", "data/movie_25000", "dictionary file")
     cmd:option("-InputFile", "data/t_given_s_test.txt", "the input file for decoding")
     cmd:option("-OutputFile", "output.txt", "the output file to store the generated responses")
+    cmd:option('-save_params_file', '', 'if not empty, save the decoder params to this file')
 
     cmd:option("-setting", "BS", "setting for decoding. Choose from sampling, BS, DiverseBS, StochasticGreedy")
     cmd:option("-StochasticGreedyNum", 1, "") -- Not found in readme.

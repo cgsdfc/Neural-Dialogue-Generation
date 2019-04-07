@@ -54,6 +54,7 @@ function DistillModelPool:train_atten()
         params[key] = value
     end
     params.saveFolder = round_dir.model_dir.dir
+    print(params)
     local model = AttenModel.new(params)
     model:train()
 end
@@ -63,10 +64,11 @@ function DistillModelPool:decode()
     local round_dir = self.round_dir
 
     params.model_file = round_dir.model_dir.model_file
-    params.params_file = round_dir.model_dir.param_file
+    params.params_file = round_dir.model_dir.params_file
     params.InputFile = round_dir.data_dir.train_file
     params.OutputFile = round_dir.tmp_dir.decoder_output
 
+    print('decoder_params: ', params)
     local decoder = Decoder.new(params)
     decoder:decode()
 end
@@ -75,21 +77,24 @@ function DistillModelPool:extract_top()
     local dict_file = self.dict_file
     local input = self.round_dir.tmp_dir.decoder_output
     local output = self.round_dir.tmp_dir.top_response
-    extract_top(input, output, dict_file)
+    extract_top(input, output, dict_file, self.params.freq_threshold)
 end
 
 function DistillModelPool:distill()
     local class = self.distiller_class
-    local params = self.distill_params
+    local params = self.distiller_params
     local round_dir = self.round_dir
 
     params.saveFolder = round_dir.distill_dir.dir
     params.TopResponseFile = round_dir.tmp_dir.top_response
 
-    for _, data_file in ipairs(round_dir.data_dir) do
-        params.TrainingData = data_file
-        local distiller = class.new(params)
-        distiller:distill()
+    for key, data_file in pairs(round_dir.data_dir) do
+        if key ~= 'dir' then
+            params.TrainingData = data_file
+            print(params)
+            local distiller = class.new(params)
+            distiller:Distill()
+        end
     end
 end
 
@@ -147,17 +152,15 @@ end
 
 -- Walk the symbolic tree and create necessary dirs.
 function DistillModelPool:create_physical_dirs()
-    for _, dir in ipairs(self.round_dir) do
-        local first_file = dir[1]
-        assert(first_file ~= nil, 'there must be at least one file!')
-        dir = path.dirname(first_file)
+    for dir, files in pairs(self.round_dir) do
+        dir = files.dir
         mkdir_if_not_yet(dir)
     end
 end
 
 function DistillModelPool:create_symbolic_dirs()
     local function template(round, params, atten_params)
-        local phy_round_dir = path.join(params.saveFolder, round)
+        local phy_round_dir = path.join(params.saveFolder, tostring(round))
         local phy_model_dir = path.join(phy_round_dir, 'model')
         local phy_distill_dir = path.join(phy_round_dir, 'distill')
         local phy_tmp_dir = path.join(phy_round_dir, 'tmp')
@@ -203,6 +206,7 @@ function DistillModelPool:create_symbolic_dirs()
             round_dir.data_dir = prev.distill_dir
         else
             round_dir.data_dir = {
+                dir = path.dirname(params.train_file),
                 train_file = params.train_file,
                 dev_file = params.dev_file,
                 test_file = params.test_file,
@@ -235,7 +239,7 @@ function DistillModelPool:find_dict_file()
         return path.normpath(path.abspath(p))
     end
 
-    local the_one = normalize(candidates[1])
+    local the_one = normalize(candidates[1].dictPath)
     for _, cand in ipairs(candidates) do
         local dp = normalize(cand.dictPath)
         if dp ~= the_one then
@@ -252,10 +256,14 @@ function DistillModelPool:__init(params)
     self.distiller_params = self:load_distiller_params(params)
 
     self.dirs = self:create_symbolic_dirs()
-    self.dict_file = params.dictPath
+    self.dict_file = self:find_dict_file()
+    logger.info('using dict_file %s', self.dict_file)
 end
 
 function DistillModelPool:train()
+    local total_round = self.params.rounds
+    logger.info('Begin %d rounds of distillation', total_round)
+
     for round = 1, self.params.rounds do
         logger.info('Round %d:', round)
         self.round_dir = self.dirs[round]
@@ -276,4 +284,7 @@ function DistillModelPool:train()
         logger.info('Distill the data')
         self:distill()
     end
+    logger.info('All rounds done.')
 end
+
+return DistillModelPool

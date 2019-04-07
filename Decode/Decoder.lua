@@ -547,6 +547,10 @@ function Decoder:decode()
         logger.info('mkdir %s', output_dir)
     end
 
+    if self.params.save_params_file ~= '' then
+        self:saveParams()
+    end
+
     local open_train_file = assert(io.open(self.params.InputFile, "r"))
     local open_write_file = assert(io.open(self.params.OutputFile, "w"))
 

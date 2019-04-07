@@ -65,6 +65,8 @@ local function parse_args()
     cmd:option("-gpu_index", 2, "")
     cmd:option("-saveFolder", "", "directory for saving output data")
 
+    cmd:option('-freq_threshold', 100, 'frequency threshold controlling what responses are considered generic')
+
     -- Glove specific options:
     cmd:option("-WordMatrix", "data/wordmatrix_movie_25000", "[Glove] pretrained Glove embedding file")
     cmd:option("-distill_four_gram", false,

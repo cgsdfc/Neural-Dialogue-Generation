@@ -631,7 +631,6 @@ end
 
 function AttenModel:train()
     if self.params.saveModel then
-        logger.info('Saving hyper parameters...')
         self:saveParams()
     end
 

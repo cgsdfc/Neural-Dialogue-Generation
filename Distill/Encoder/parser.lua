@@ -7,6 +7,7 @@ local function parse_args()
     cmd:option("-batch_size", 1280, "")
     cmd:option("-gpu_index", 1, "")
     cmd:option("-distill_rate", 0.08, "the proportion of training data to distill in this round")
+    cmd:option("-dictPath", "data/movie_25000", "dictionary file")
 
     cmd:option("-params_file", "", "hyperparameters for the pre-trained generative model")
     cmd:option("-model_file", "", " path for loading a pre-trained generative model")
