@@ -8,8 +8,8 @@ local function parse_args()
 
     cmd:option("-params_file", "", "input parameter files for a pre-trained Seq2Seq model")
     cmd:option("-model_file", "", "path for loading a pre-trained Seq2Seq model")
-    cmd:option("-dictPath", "./data/movie_25000", "dictionary file")
-    cmd:option("-InputFile", "./data/t_given_s_test.txt", "the input file for decoding")
+    cmd:option("-dictPath", "data/movie_25000", "dictionary file")
+    cmd:option("-InputFile", "data/t_given_s_test.txt", "the input file for decoding")
     cmd:option("-OutputFile", "output.txt", "the output file to store the generated responses")
 
     cmd:option("-setting", "BS", "setting for decoding. Choose from sampling, BS, DiverseBS, StochasticGreedy")
@@ -43,18 +43,7 @@ local function parse_args()
 
     local params = cmd:parse(arg)
 
-    -- Sanity check to avoid mysterios errors.
-    assert(params.params_file ~= '', 'params_file is required')
-    assert(params.model_file ~= '', 'model_file is required')
-
-    assert(path.isfile(params.dictPath), 'dictPath must exist')
-    assert(path.isfile(params.InputFile), 'input file must exist')
-
-    if params.MMI then
-        assert(path.isfile(params.MMI_model_file), 'MMI model file must exist when using MMI')
-        assert(path.isfile(params.MMI_params_file), 'MMI params file must exist when using MMI')
-    end
-
+  
     print(params)
     return params
 end

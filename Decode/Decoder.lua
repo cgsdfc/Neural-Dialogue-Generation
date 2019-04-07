@@ -10,6 +10,18 @@ local Dataset = require('Atten/Dataset')
 
 -- Constructor of decode_model.
 function Decoder:__init(params)
+    -- Sanity check to avoid mysterios errors.
+    assert(params.params_file ~= '', 'params_file is required')
+    assert(params.model_file ~= '', 'model_file is required')
+
+    assert(path.isfile(params.dictPath), 'dictPath must exist')
+    assert(path.isfile(params.InputFile), 'input file must exist')
+
+    if params.MMI then
+        assert(path.isfile(params.MMI_model_file), 'MMI model file must exist when using MMI')
+        assert(path.isfile(params.MMI_params_file), 'MMI params file must exist when using MMI')
+    end
+
     logger.info('Loading params from %s', params.params_file)
     local params_file = torch.DiskFile(params.params_file, "r"):binary()
     local model_params = params_file:readObject()

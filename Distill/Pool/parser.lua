@@ -1,6 +1,7 @@
 require 'logroll'
 
 local logger = logroll.print_logger()
+local MAX_DECODED_NUM = 1000000
 
 local function check_params(params)
     logger.info('Checking viability of initial dataset')
@@ -17,19 +18,19 @@ local function check_params(params)
 
 
     local known_methods = { Encoder = 1, Glove = 1 }
-    if not known_methods[params.distill_method] then
-        error('Unknown distill_method: ' .. params.distill_method)
+    if not known_methods[params.distiller] then
+        error('Unknown distiller: ' .. params.distiller)
     end
-    logger.info('Using distill_method: %s', params.distill_method)
+    logger.info('Using distiller: %s', params.distiller)
 
-    if params.distill_method == 'Encoder' then
+    if params.distiller == 'Encoder' then
         logger.info('Checking viability of pretrained encoder')
         assert(path.isfile(params.params_file), 'params_file does not exist!')
         assert(path.isfile(params.model_file), 'model_file does not exist!')
         logger.info('OK')
     end
 
-    if params.distill_method == 'Glove' then
+    if params.distiller == 'Glove' then
         logger.info('Checking viability of Glove embeddings')
         assert(path.isfile(params.WordMatrix), 'WordMatrix does not exist!')
         logger.info('OK')
@@ -47,8 +48,13 @@ local function parse_args()
     cmd:option("-train_file", "data/t_given_s_train.txt", "")
     cmd:option("-dev_file", "data/t_given_s_dev.txt", "")
     cmd:option("-test_file", "data/t_given_s_test.txt", "")
+    cmd:option("-dictPath", "data/movie_25000", "dictionary file")
 
-    cmd:option("-distill_method", "Encoder", "distillation method to use. Choose from {Encoder,Glove}")
+    cmd:option("-atten_params", "", "params file for training the attention model")
+    cmd:option("-decoder_params", "", "params file for the decoder")
+    cmd:option("-max_decoded_num", MAX_DECODED_NUM, "the maximum number of instances to decode")
+
+    cmd:option("-distiller", "Encoder", "distillation method to use. Choose from {Encoder,Glove}")
 
     cmd:option("-save_summary", false, "whether to write a summary file per round")
 
@@ -65,11 +71,10 @@ local function parse_args()
         "[Glove] whether to consider four-gram cooccurrence in Glove distillation")
 
     -- Encoder specific options:
-    cmd:option("-params_file", "", "[Encoder] hyperparameters for the pre-trained generative model")
-    cmd:option("-model_file", "", "[Encoder] path for loading a pre-trained generative model")
+    cmd:option("-encoder_params", "", "[Encoder] params file for the pre-trained generative model")
+    cmd:option("-encoder_model", "", "[Encoder] path for loading a pre-trained generative model")
 
     local params = cmd:parse(arg)
-    check_params(params)
     print(params)
     return params
 end
