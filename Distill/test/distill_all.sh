@@ -5,12 +5,12 @@
 ROUND=0
 SAVE_ROOT=save/test-distill
 
-SAVE_SCORE_FILE=$SAVE_ROOT/$ROUND/tmp/glove_score
-TOP_RES_FILE=$SAVE_ROOT/$ROUND/tmp/top_response4.txt
+TOP_RES_FILE=$SAVE_ROOT/$ROUND/tmp/top_response5.txt
 TRAIN_DATA_ROOT=$SAVE_ROOT/$ROUND/data/
 
-TOTAL_LINES=256
-
+# Glove or Encoder
+DISTILL_METHOD=$1
+BATCH_SIZE=1
 
 TO_DISTILL=(
     t_given_s_dev.txt
@@ -22,20 +22,20 @@ OUTPUT_ROOT=$SAVE_ROOT/$ROUND/output
 
 mkdir -p $OUTPUT_ROOT
 
+echo "Using $DISTILL_METHOD"
+
 for file in ${TO_DISTILL[@]}
 do
     TRAIN_DATA=$TRAIN_DATA_ROOT/$file
-    OUTPUT_FILE=$OUTPUT_ROOT/$file
-
     echo "Distilling $TRAIN_DATA"
 
-    th Distill/Glove/distill.lua \
+    th Distill/$DISTILL_METHOD/distill.lua \
         -TopResponseFile $TOP_RES_FILE \
         -TrainingData $TRAIN_DATA \
-        -OutputFile $OUTPUT_FILE \
-        -total_lines $TOTAL_LINES \
-        -load_score \
-        -save_score_file $SAVE_SCORE_FILE
+        -saveFolder $OUTPUT_ROOT \
+        -batch_size $BATCH_SIZE \
+        -gpu_index 2 \
+        -save_summary
 done
 
 echo "all distillation done"

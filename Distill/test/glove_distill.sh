@@ -17,4 +17,5 @@ th Distill/Glove/distill.lua \
     -TrainingData $TRAIN_DATA \
     -saveFolder $SAVE_FOLDER \
     -batch_size $BATCH_SIZE \
-    -save_summary
+    -save_summary \
+    -distill_four_gram

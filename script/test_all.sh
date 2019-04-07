@@ -16,6 +16,8 @@ ALL_TEST_SCRIPTS=(
 
     Adversarial/Discriminative/test_train_dis.sh
     Adversarial/Reinforce/test_reinforce.sh
+
+    Distill/test_all.sh
 )
 
 for test in ${ALL_TEST_SCRIPTS[@]}
