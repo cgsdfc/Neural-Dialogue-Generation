@@ -32,6 +32,7 @@ function EncoderDistiller:ComputeScore()
             break
         end
 
+        -- TODO: Is this code correct? Use word_s or word_t?
         self.mode = "decoding"
         self.Word_s = self.Word_s:cuda()
         self.Padding_s = self.Padding_s:cuda()
@@ -98,9 +99,9 @@ function EncoderDistiller:RemoveExamples()
 
     local summary
     if self.params.save_summary then
-        local filename = path.join(self.params.saveFolder, 'encoder_distill_summary.csv')
+        local filename = path.join(self.params.saveFolder, path.basename(self.params.TrainingData) .. '_summary.csv')
         logger.info('Writing summary to %s', filename)
-        summary = assert(io.open(filename, 'w'), 'cannot open save_score_file')
+        summary = assert(io.open(filename, 'w'), 'cannot open summary_file')
         summary:write('Score,Distilled,Example\n')
     end
 

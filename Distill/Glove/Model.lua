@@ -7,9 +7,16 @@ require 'logroll'
 local GloveDistiller = torch.class('GloveDistiller')
 local logger = logroll.print_logger()
 
+function GloveDistiller:MakeFilenames()
+    assert(path.isdir(self.params.saveFolder), 'saveFolder does not exist!')
+    local basename = path.basename(self.params.TrainingData)
+    self.output_file = path.join(self.params.saveFolder, basename)
+    if self.params.save_summary then
+        self.summary_file = path.join(self.params.saveFolder, basename .. '_summary.csv')
+    end
+end
 
-function GloveDistiller:__init(params)
-    self.params = params
+function GloveDistiller:BuildEmbeddingLayer()
     logger.info('loading Glove embeddings from %s', self.params.WordMatrix)
     local file = torch.DiskFile(self.params.WordMatrix, "r"):binary()
     local embedding = file:readObject()
@@ -30,23 +37,23 @@ function GloveDistiller:__init(params)
     self.getMatrix:add(nn.Sum(2))
     self.getMatrix:add(nn.Normalize(2))
     self.getMatrix = self.getMatrix:cuda()
+end
+
+function GloveDistiller:__init(params)
+    self.params = params
+    self:MakeFilenames()
+
+    logger.info('Building Embedding Layer')
+    self:BuildEmbeddingLayer()
 
     logger.info('Loading four-gram')
-    self:LoadGram()
+    self:LoadFourGram()
 
     logger.info('Loading lines of top response from %s', self.params.TopResponseFile)
     self.top_response_lines = self:ReadFile(self.params.TopResponseFile)
 
-    logger.info('Converting lines of top response to embeddings')
+    logger.info('Computing top response embeddings')
     self.top_response_embedding = self:lines2Embedding(self.top_response_lines)
-
-    if self.params.load_score then
-        logger.info('loading previously computed score from %s', self.params.save_score_file)
-        local file = torch.DiskFile(self.params.save_score_file, "r"):binary()
-        self.all_scores = file:readObject()
-        file:close()
-        self.all_scores = self.all_scores:double()
-    end
 end
 
 function GloveDistiller:lines2Embedding(lines)
@@ -77,7 +84,7 @@ function GloveDistiller:lines2Embedding(lines)
 end
 
 -- Read the Top Response File. Return a table of 4-grams.
-function GloveDistiller:LoadGram()
+function GloveDistiller:LoadFourGram()
     local top_response_file = assert(io.open(self.params.TopResponseFile, "r"),
         'cannot open TopResponseFile')
     self.FourGram = {}
@@ -121,10 +128,11 @@ end
 
 -- Compute similarity score.
 function GloveDistiller:GetScore()
+    logger.info('Computing cosine similarity scores...')
     local open_train = assert(io.open(self.params.TrainingData), 'cannot open TrainingData')
     local current_lines = {}
     self.all_scores = torch.Tensor():cuda()
-    local num = 0
+    local num_lines = 0
 
     -- Instead of using a Dataset to get batches, here we use a buffer -- current_lines.
     while true do
@@ -133,72 +141,60 @@ function GloveDistiller:GetScore()
             break
         end
 
-        logger.info('fetch line %s', line)
         local splits = stringx.split(line, "|")
         local str = stringx.strip(splits[2])
-        logger.info('training response %d: %s', num, str)
 
         current_lines[#current_lines + 1] = str
-        num = num + 1
+        num_lines = num_lines + 1
 
         if #current_lines % self.params.batch_size == 0 then
-            logger.info('number of processed lines: %d', num)
-            logger.info('Start computing score on current_lines')
-
             local current_matrix = self:lines2Embedding(current_lines)
             local score = nn.MM(false, true):cuda():forward({ current_matrix, self.top_response_embedding })
             score = torch.max(score, 2)
 
-            logger.info('adding to all_scores')
             if self.all_scores:nDimension() == 0 then
                 self.all_scores = score
             else
                 self.all_scores = torch.cat(self.all_scores, score, 1)
             end
 
-            logger.info('current_lines cleared')
             current_lines = {}
         end
     end
 
-    logger.info('flatten all_scores')
+    assert(num_lines >= self.params.batch_size, '#Examples is smaller than batch_size, no score is computed!')
     self.all_scores = torch.reshape(self.all_scores, self.all_scores:size(1))
-
-    if self.params.save_score then
-        logger.info('save all_scores to %s', self.params.save_score_file)
-        local file = torch.DiskFile(self.params.save_score_file, "w"):binary()
-        file:writeObject(self.all_scores)
-        file:close()
-    end
+    self.total_lines = num_lines
 end
 
-function GloveDistiller:Distill()
-    local output = assert(io.open(self.params.OutputFile, "w"), 'cannot open OutputFile')
-    local reserve = assert(io.open("Glove_reserve_index.txt", "w"), 'cannot open Glove_reserve_index.txt')
-    local remove = assert(io.open("Glove_remove_index.txt", "w"), 'cannot open Glove_remove_index.txt')
+function GloveDistiller:RemoveFiles()
+    logger.info('Removing examples...')
+    local output = assert(io.open(self.output_file, "w"), 'cannot open output_file')
+    local summary
+    if self.summary_file then
+        summary = torch.DiskFile(self.summary_file, 'w')
+        summary:writeString('Score,Distilled,Example\n')
+    end
 
     logger.info('Ranking training examples on their scores')
     local k = torch.floor(0.3 * self.all_scores:size(1))
     logger.info('k for topk: %d', k)
-    local rank_score, index = torch.topk(self.all_scores, k, true)
+
+    local _, index = torch.topk(self.all_scores, k, true)
     local remove_indexes = {}
 
-    local num_to_remove = torch.floor(self.params.total_lines * self.params.distill_rate)
+    local num_to_remove = torch.floor(self.total_lines * self.params.distill_rate)
     logger.info('number of examples to remove: %d', num_to_remove)
 
-    logger.info('collecting indecies to be removed')
     for i = 1, num_to_remove do
         remove_indexes[index[i]] = 1
     end
-    logger.info('examples to remove:')
-    logger.info(remove_indexes)
 
     local num = 0
     local open_train = assert(io.open(self.params.TrainingData), 'cannot open TrainingData')
     local four_gram_distill_num = 0
     local cosine_distill_num = 0
 
-    logger.info('distill begins')
     while true do
         local line = open_train:read("*line")
         if line == nil then
@@ -207,13 +203,12 @@ function GloveDistiller:Distill()
 
         num = num + 1
         if num > self.all_scores:size(1) then
-            logger.info('number of examples exceeds that of all_scores: %d', num)
+            logger.error('number of examples exceeds that of all_scores: %d', num)
             break
         end
 
         local distill = false
         if remove_indexes[num] ~= nil then
-            logger.info('distill #%d for high cosine similarity with top responses', num)
             cosine_distill_num = cosine_distill_num + 1
             distill = true
         end
@@ -222,41 +217,38 @@ function GloveDistiller:Distill()
         local target = line:sub(t + 1, -1)
 
         if self.params.distill_four_gram and not distill then
-            logger.info('try to distill with 4-grams cooccurrence')
             local G = stringx.split(target, " ")
             for i = 1, #G - 3 do
                 local gram = G[i] .. " " .. G[i + 1] .. " " .. G[i + 2] .. " " .. G[i + 3]
                 if self.FourGram[gram] ~= nil then
-                    logger.info('distill #%d for 4-grams cooccurrence with top responses', num)
                     distill = true
                     four_gram_distill_num = four_gram_distill_num + 1
                     break
                 end
             end
         end
-        if not distill then
-            logger.info('not distilled')
-        end
 
         local score = self.all_scores[num]
-        logger.info('cosine score for #%d: %f', num, score)
+        if summary then
+            summary:writeString(string.format('%f,%s,%s\n', score, distill, line))
+        end
 
-        logger.info('writing to files')
         if not distill then
             output:write(line .. "\n")
-            reserve:write(score .. "\n")
-            reserve:write(target .. "\n")
-        else
-            remove:write(score .. "\n")
-            remove:write(target .. "\n")
         end
     end
     logger.info('Distilled due to cosine similarity: %d', cosine_distill_num)
     logger.info('Distilled due to 4-grams: %d', four_gram_distill_num)
 
-    reserve:close()
-    remove:close()
     output:close()
+    if summary then
+        summary:close()
+    end
+end
+
+function GloveDistiller:Distill()
+    self:GetScore()
+    self:RemoveFiles()
 end
 
 return GloveDistiller

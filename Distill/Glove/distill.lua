@@ -12,12 +12,5 @@ cutorch.setDevice(params.gpu_index)
 cutorch.manualSeed(123)
 
 local model = Distiller.new(params)
-
-if params.save_score then
-    logger.info('compute and save scores')
-    model:GetScore()
-else
-    logger.info('distill data based on previously computed scores')
-    assert(params.load_score, 'for distill, load_score must be set')
-    model:Distill()
-end
+model:Distill()
+logger.info('Distillation done.')

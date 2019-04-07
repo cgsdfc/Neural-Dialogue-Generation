@@ -16,8 +16,6 @@ local function parse_args()
     local params = cmd:parse(arg)
     assert(path.isdir(params.saveFolder))
 
-
-
     print(params)
     return params
 end
