@@ -4,7 +4,7 @@
 ROUND=0
 SAVE_ROOT=save/test-distill
 
-TOP_RES_FILE=$SAVE_ROOT/$ROUND/tmp/top_response4.txt
+TOP_RES_FILE=$SAVE_ROOT/$ROUND/tmp/top_response5.txt
 TRAIN_DATA=$SAVE_ROOT/$ROUND/data/t_given_s_train.txt
 OUTPUT_FILE=$SAVE_ROOT/$ROUND/tmp/distill.txt
 

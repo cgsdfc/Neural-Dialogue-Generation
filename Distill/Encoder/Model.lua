@@ -6,7 +6,6 @@ local EncoderDistiller = torch.class('EncoderDistiller', 'Decoder')
 
 function EncoderDistiller:Distill()
     logger.info('Distillation begins...')
-    logger.info('Computing embeddings for top responses...')
     self:ComputeTopResponse()
     self:ComputeScore()
     self:RemoveExamples()
@@ -29,12 +28,16 @@ function EncoderDistiller:ComputeScore()
         self.Left_s, self.Left_t,
         self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
 
+        if End == 1 then
+            break
+        end
+
         self.mode = "decoding"
         self.Word_s = self.Word_s:cuda()
         self.Padding_s = self.Padding_s:cuda()
         self:model_forward()
 
-        logger.info('Computing embedding for training response: %s', self:IndexToWord(self.Word_s))
+        logger.info('Computing embedding for training response')
         local embed = torch.Tensor(self.last[2 * self.params.layers - 1]:size()):cuda():copy(self.last[2 * self.params.layers - 1])
 
         logger.info('Normalizing embedding...')
@@ -54,7 +57,7 @@ function EncoderDistiller:ComputeScore()
         -- The max of them denotes the most similar pair.
 
         -- Note: it computes scores between *one* training embedding and *all* top embeddings, using MM.
-        logger.info('Computing cosine similarity between %s and %s', embed, self.TopResponseEmbedding)
+        logger.info('Computing cosine similarity between top response and training response')
         local score = nn.MM(false, true):cuda():forward({ embed, self.TopResponseEmbedding })
         score = torch.max(score, 2)
 
@@ -67,7 +70,7 @@ function EncoderDistiller:ComputeScore()
 
         num = num + self.params.batch_size
         if num % 1280000 == 0 then
-            logger.info('Processing the %d batch', num / self.params.batch_size)
+            logger.info('Processed examples: %d', num)
         end
     end
 
@@ -80,7 +83,7 @@ function EncoderDistiller:ComputeScore()
     -- remove_indexes[i] == 1 if i is to be removed.
     local remove_indexes = {}
     local num_to_remove = torch.floor(num / 10)
-    logger.info('The number of examples to be removed: %d', num_to_remove)
+    logger.info('number of examples to be removed: %d', num_to_remove)
 
     -- Remove the top 10% not the all.
     for i = 1, num_to_remove do
@@ -131,8 +134,10 @@ end
 
 -- Compute the vector representation of the top responses. (TopResponseEmbedding)
 function EncoderDistiller:ComputeTopResponse()
-    local open_top_response_file = assert(io.open(self.params.TopResponseFile, "r"),
-        'cannot open TopResponseFile')
+    logger.info('Computing embeddings for top responses...')
+
+    local open_top_response_file = assert(io.open(self.params.TopResponseFile, "r"), 'cannot open TopResponseFile')
+
     local End = 0
     -- A list to hold all top response embeddings.
     self.TopResponseEmbedding = torch.Tensor():cuda()
@@ -143,8 +148,9 @@ function EncoderDistiller:ComputeTopResponse()
         self.Left_s, self.Left_t,
         self.Padding_s, self.Padding_t = self.dataset:read_train(open_top_response_file)
 
-        print(self.Word_s)
-        print(self.Word_t)
+        if End == 1 then
+            break
+        end
 
         -- in decoding mode, only source is considered. target is not important.
         self.mode = "decoding"

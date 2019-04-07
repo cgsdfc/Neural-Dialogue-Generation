@@ -8,9 +8,9 @@ TARGET_ROOT=$SAVE_ROOT/$ROUND/data/
 SOURCE_ROOT=data/
 
 DATASET_FILES=(
-t_given_s_dev.txt
-t_given_s_test.txt
-t_given_s_train.txt
+    t_given_s_dev.txt
+    t_given_s_test.txt
+    t_given_s_train.txt
 )
 
 mkdir -p $TARGET_ROOT

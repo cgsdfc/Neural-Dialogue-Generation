@@ -8,7 +8,7 @@ SAVE_ROOT=save/test-distill
 SAVE_SCORE_FILE=$SAVE_ROOT/$ROUND/tmp/glove_score
 TOP_RES_FILE=$SAVE_ROOT/$ROUND/tmp/top_response4.txt
 TRAIN_DATA=$SAVE_ROOT/$ROUND/data/t_given_s_train.txt
-OUTPUT_FILE=$SAVE_ROOT/$ROUND/tmp/distill.txt
+OUTPUT_FILE=$SAVE_ROOT/$ROUND/tmp/distill-train.txt
 TOTAL_LINES=256
 
 
