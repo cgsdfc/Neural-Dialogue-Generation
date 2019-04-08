@@ -7,9 +7,9 @@ local logger = logroll.print_logger()
 local Decoder, parent = torch.class('Decoder', 'AttenModel')
 local Dataset = require('Atten/Dataset')
 
+function Decoder:sanity_check()
+    local params = self.params
 
--- Constructor of decode_model.
-function Decoder:__init(params)
     -- Sanity check to avoid mysterios errors.
     assert(params.params_file ~= '', 'params_file is required')
     assert(params.model_file ~= '', 'model_file is required')
@@ -21,7 +21,10 @@ function Decoder:__init(params)
         assert(path.isfile(params.MMI_model_file), 'MMI model file must exist when using MMI')
         assert(path.isfile(params.MMI_params_file), 'MMI params file must exist when using MMI')
     end
+end
 
+-- Constructor of decode_model.
+function Decoder:__init(params)
     logger.info('Loading params from %s', params.params_file)
     local params_file = torch.DiskFile(params.params_file, "r"):binary()
     local model_params = params_file:readObject()
@@ -538,6 +541,7 @@ end
 
 -- Entry point to run decoding.
 function Decoder:decode()
+    self:sanity_check()
     logger.info('InputFile: %s', self.params.InputFile)
     logger.info('OutputFile: %s', self.params.OutputFile)
 
