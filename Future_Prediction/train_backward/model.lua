@@ -94,7 +94,7 @@ function model:test()
         aver_ppl = aver_ppl + self.backward_score:sum()
         sen_num = sen_num + self.backward_score:size(1)
         self.mode = "test"
-        Batch_error, Batch_instance = self:model_forward()
+        local Batch_error, Batch_instance = self:model_forward()
         total_Error = total_Error + Batch_error
         n_instance = n_instance + Batch_instance
     end

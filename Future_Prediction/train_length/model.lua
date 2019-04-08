@@ -52,6 +52,8 @@ function model:model_forward()
     local total_Error = 0
     local instance = 0
     self.context = torch.Tensor(self.Word_s:size(1), self.Word_s:size(2), self.params.dimension):cuda()
+    local output
+
     for t = 1, self.Word_s:size(2) do
         local input = {}
         if t == 1 then
@@ -134,7 +136,7 @@ function model:test()
         self.Word_s = self.Word_s:cuda()
         self.Word_t = self.Word_t:cuda()
         self.Padding_s = self.Padding_s:cuda()
-        Batch_error, Batch_instance = self:model_forward()
+        local Batch_error, Batch_instance = self:model_forward()
         total_Error = total_Error + Batch_error
         n_instance = n_instance + Batch_instance
     end

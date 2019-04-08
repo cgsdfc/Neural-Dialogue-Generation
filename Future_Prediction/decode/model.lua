@@ -68,7 +68,7 @@ function model:decode_BS()
         local lstm_input = self:clone_(self.last)
         if t == 2 then
             local context = torch.reshape(self.context, self.context:size(1), 1, self.context:size(2), self.context:size(3))
-            context_ = torch.expand(context, context:size(1), self.params.beam_size, context:size(3), context:size(4))
+            local context_ = torch.expand(context, context:size(1), self.params.beam_size, context:size(3), context:size(4))
             self.context_beam = torch.reshape(context_, context_:size(1) * context_:size(2), context_:size(3), context_:size(4))
             context_ = torch.expand(context, context:size(1), self.params.beam_size * self.params.beam_size, context:size(3), context:size(4))
             self.context_beam_future = torch.reshape(context_, context_:size(1) * context_:size(2), context_:size(3), context_:size(4))
