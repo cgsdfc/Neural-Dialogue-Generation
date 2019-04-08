@@ -1,8 +1,36 @@
--- The implementation makes use of a *symbolic directory structure* to run the system.
+-- ===================
+-- Overview of a Round
+-- ===================
+-- This module implements a simple system to run multiple rounds of data distillation
+-- consecutively. In each round, an attention model is first trained on the data remained
+-- after previous round of distillation (or the initial data if it is the first round).
+-- Then the model is used to decode a large number of context
+-- to response on the training set. For decoding, which set of data to use is not important and we
+-- use the training set since it is large. Then the most frequent responses of the decoder output are
+-- extracted. Denoted as *top_response*, these responses are used as a filter to distill the dataset.
+-- For the distillation step, you can choose from two distiller -- Glove and Encoder. They differ in
+-- the way to convert sentences to embeddings. Glove uses the pre-trained *Global Vector* (Pennington et al. 2018)
+-- a variant of word embedding, to map each word to a vector and use the sum of the words as the representation of a
+-- sentence. Encoder uses the encoder part of a Seq2Seq model to obtain a vector representation of the sentence.
+-- It is also better known as the hidden state of the last time step in the LSTM unit.
+-- Each distiller accepts their own options while they both accept some common options like distill_rate. Refer
+-- to their document for further information.
+-- A distiller first assigns a *similarity score* to every examples in the data to distill. The score is based on
+-- cosine similarity and in many ways resembles the *embedding-based metric*. Then the examples with the highest
+-- score wihin the range allowed by distill_rate will be removed from the original set. All the train, develop and test dataset
+-- are distilled in this way and they become the data for the next round. This completes one round of distillation.
+--
+--
+-- ======================
+-- Implementation Details
+-- ======================
+-- The implementation makes use of a *symbolic directory* to run the system.
 -- The symbolic directory is a nested table holded in memory and backed by physical directories.
--- The keys of the table represent the symbolic dirs or files while the value of the table represents
--- phisical directories or files. The symbolic structure is the public visible API and is rather ideal
--- and straightforward while the phisical structure is hidden aways and rapiddly changing.
+-- The keys of the table represent the symbolic dirs or files while the values of the table represent
+-- phisical directories or files. This design allows the code interfacing each models
+-- to manipulate directory and file in a similar way as in shell, using dot notation. It also separates
+-- the creation of physical paths and the use of them. We make sure all paths needed in an invocation
+-- are created before. It renders cleaner, more readable and shorter code, free of the cluster of mkdir and path.join.
 --
 -- The symbolic structure is:
 -- * round_dir
@@ -16,15 +44,15 @@
 --      * tmp_dir
 --          * decoder_output
 --          * top_response
---      * distill
+--      * distill_dir
 --          * train_file
 --          * dev_file
 --          * test_file
 --
 -- This structure describes all things required to run the system.
--- More or less physical files will be produced.
+-- An entry might not have a phisical correspondence.
 -- All the round_dirs for all rounds are kept in the memory in the whole training.
--- Specially, round-1, which is the initial round, maps its data_dir and underlying files
+-- Specially, round-1, which is the initial round, maps its data_dir and files
 -- to the initial data files passed in. For rounds after round-1, data_dir is linked to the distill_dir
 -- of the previous round.
 
@@ -39,26 +67,33 @@ local Decoder = require('Decode/Decoder')
 
 local DistillModelPool = torch.class('DistillModelPool')
 
+
 local function mkdir_if_not_yet(dir)
     if not path.isdir(dir) then
         paths.mkdir(dir)
     end
 end
 
+-- Train an attention model.
 function DistillModelPool:train_atten()
     local params = self.atten_params
     local round_dir = self.round_dir
     local data_dir = round_dir.data_dir
 
     for key, value in pairs(data_dir) do
-        params[key] = value
+        if key ~= 'dir' then
+            params[key] = value
+        end
     end
     params.saveFolder = round_dir.model_dir.dir
+
+    logger.info('atten_params:')
     print(params)
     local model = AttenModel.new(params)
     model:train()
 end
 
+-- Decode the training set using the attention model.
 function DistillModelPool:decode()
     local params = self.decoder_params
     local round_dir = self.round_dir
@@ -68,29 +103,40 @@ function DistillModelPool:decode()
     params.InputFile = round_dir.data_dir.train_file
     params.OutputFile = round_dir.tmp_dir.decoder_output
 
-    print('decoder_params: ', params)
+    logger.info('decoder_params:')
+    print(params)
     local decoder = Decoder.new(params)
     decoder:decode()
 end
 
+-- Extract top_response.
 function DistillModelPool:extract_top()
-    local dict_file = self.dict_file
     local input = self.round_dir.tmp_dir.decoder_output
     local output = self.round_dir.tmp_dir.top_response
-    extract_top(input, output, dict_file, self.params.freq_threshold)
+    local dict_file = self.dict_file
+    local freq_threshold = self.params.freq_threshold
+
+    logger.info('input: %s', input)
+    logger.info('output: %s', output)
+    logger.info('freq_threshold: %s', freq_threshold)
+    extract_top(input, output, dict_file, freq_threshold)
 end
 
+-- Distill the data with top_response.
 function DistillModelPool:distill()
     local class = self.distiller_class
     local params = self.distiller_params
     local round_dir = self.round_dir
 
+    -- *Note*: we rely on the fact that the distiller use the *same* filename
+    -- as its input files.
     params.saveFolder = round_dir.distill_dir.dir
     params.TopResponseFile = round_dir.tmp_dir.top_response
 
     for key, data_file in pairs(round_dir.data_dir) do
         if key ~= 'dir' then
             params.TrainingData = data_file
+            logger.info('distiller_params:')
             print(params)
             local distiller = class.new(params)
             distiller:Distill()
@@ -130,6 +176,7 @@ end
 function DistillModelPool:load_distiller_params(params)
     local distiller = params.distiller
     self.distiller_class = require(string.format('Distill/%s/Model', distiller))
+
     local distiller_params = {
         distill_rate = params.distill_rate,
         save_summary = params.save_summary,
@@ -152,12 +199,14 @@ end
 
 -- Walk the symbolic tree and create necessary dirs.
 function DistillModelPool:create_physical_dirs()
-    for dir, files in pairs(self.round_dir) do
-        dir = files.dir
-        mkdir_if_not_yet(dir)
+    for _, files in pairs(self.round_dir) do
+        if files.dir then
+            mkdir_if_not_yet(files.dir)
+        end
     end
 end
 
+-- Create all the symbolic dirs we need in all rounds.
 function DistillModelPool:create_symbolic_dirs()
     local function template(round, params, atten_params)
         local phy_round_dir = path.join(params.saveFolder, tostring(round))
@@ -172,6 +221,7 @@ function DistillModelPool:create_symbolic_dirs()
         local test_file = path.basename(params.test_file)
 
         return {
+            -- Depend on round.
             data_dir = {
                 train_file = '',
                 dev_file = '',
@@ -217,6 +267,8 @@ function DistillModelPool:create_symbolic_dirs()
     return dirs
 end
 
+-- Since many models accept -dictPath option, we need to find out
+-- *the_one* we are going to use.
 function DistillModelPool:find_dict_file()
     local candidates = {}
     local params_to_look_for = {

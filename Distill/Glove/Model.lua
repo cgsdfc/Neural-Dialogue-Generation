@@ -51,6 +51,10 @@ function GloveDistiller:__init(params)
 
     logger.info('Loading lines of top response from %s', self.params.TopResponseFile)
     self.top_response_lines = self:ReadFile(self.params.TopResponseFile)
+    if #self.top_response_lines == 0 then
+        logger.error('top_response_file is empty: %s', self.params.TopResponseFile)
+        error('Distillation ends')
+    end
 
     logger.info('Computing top response embeddings')
     self.top_response_embedding = self:lines2Embedding(self.top_response_lines)

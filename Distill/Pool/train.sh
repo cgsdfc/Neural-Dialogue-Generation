@@ -4,7 +4,7 @@ ATTEN_PARAMS=save/test-atten/params
 DECODER_PARAMS=save/test-decode/params
 BATCH_SIZE=1
 FREQ_THRES=5
-ROUNDS=8
+ROUNDS=6
 
 ENCODER_PARAMS=save/test-atten/params
 ENCODER_MODEL=save/test-atten/model8

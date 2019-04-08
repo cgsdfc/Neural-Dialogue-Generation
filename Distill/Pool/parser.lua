@@ -61,7 +61,7 @@ local function parse_args()
     cmd:option("-batch_size", 64, "number of examples to be processed at one operation." ..
             "Note: it should *not* be larger than the total number of all examples")
 
-    cmd:option("distill_rate", 0.08, "the proportion of training data to distill in a round")
+    cmd:option("-distill_rate", 0.08, "the proportion of training data to distill in a round")
     cmd:option("-gpu_index", 2, "")
     cmd:option("-saveFolder", "", "directory for saving output data")
 
