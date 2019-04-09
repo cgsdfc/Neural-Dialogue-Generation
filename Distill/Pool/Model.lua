@@ -4,7 +4,7 @@
 -- This module implements a simple system to run multiple rounds of data distillation
 -- consecutively. In each round, an attention model is first trained on the data remained
 -- after previous round of distillation (or the initial data if it is the first round).
--- Then the model is used to decode a large number of context
+-- Then the model is used to Decode a large number of context
 -- to response on the training set. For decoding, which set of data to use is not important and we
 -- use the training set since it is large. Then the most frequent responses of the decoder output are
 -- extracted. Denoted as *top_response*, these responses are used as a filter to distill the dataset.
@@ -234,7 +234,7 @@ function DistillModelPool:create_symbolic_dirs()
             },
             tmp_dir = {
                 dir = phy_tmp_dir,
-                decoder_output = path.join(phy_tmp_dir, 'decode.txt'),
+                decoder_output = path.join(phy_tmp_dir, 'Decode.txt'),
                 top_response = path.join(phy_tmp_dir, 'top_response.txt'),
             },
             distill_dir = {

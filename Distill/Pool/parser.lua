@@ -52,7 +52,7 @@ local function parse_args()
 
     cmd:option("-atten_params", "", "params file for training the attention model")
     cmd:option("-decoder_params", "", "params file for the decoder")
-    cmd:option("-max_decoded_num", MAX_DECODED_NUM, "the maximum number of instances to decode")
+    cmd:option("-max_decoded_num", MAX_DECODED_NUM, "the maximum number of instances to Decode")
 
     cmd:option("-distiller", "Encoder", "distillation method to use. Choose from {Encoder,Glove}")
 

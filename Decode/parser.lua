@@ -19,7 +19,7 @@ local function parse_args()
     cmd:option("-min_length", 0, "the minimum length of a decoded response")
 
     cmd:option("-max_decoded_num", 0,
-        "the maximum number of instances to decode. decode the entire input set if the value is set to 0")
+        "the maximum number of instances to Decode. Decode the entire input set if the value is set to 0")
 
     cmd:option("-target_length", 0,
         "force the length of the generated target, 0 means there is no such constraints")
