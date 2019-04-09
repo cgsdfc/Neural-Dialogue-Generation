@@ -1,7 +1,7 @@
 require 'Decode/Decoder'
 
 local BackwardModel = torch.class('BackwardModel')
-local DICT_FILE="data/movie_25000"
+local DICT_FILE = "data/movie_25000"
 
 -- torch.factory(name) returns the *factory function* for the class with *name*.
 -- A factory function creates an *empty* object of a class -- ideal for our *external initialization* use case
@@ -18,7 +18,7 @@ end
 
 local function load_decoder(params)
     local model = DecoderFactory()
---    model
+    --    model
 end
 
 function BackwardModel:__init(params)

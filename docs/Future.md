@@ -10,12 +10,12 @@ Available options include:
 
     -dimension          (default 512, vector dimensionality. The value should be the same as that of the pretrained Seq2Seq model.
                         Otherwise, an error will be reported)
-    -params_file        (default "../../Atten/save_t_given_s/params", load hyperparameters for a pre-trained generative model)
-    -generate_model     (default ../../Atten/save_t_given_s/model1, path for loading the pre-trained generative model)
+    -params_file        (default "Atten/save_t_given_s/params", load hyperparameters for a pre-trained generative model)
+    -model_file     (default Atten/save_t_given_s/model1, path for loading the pre-trained generative model)
     -save_model_path    (default "save", path for saving the model)
-    -train_file         (default "../../data/t_given_s_train.txt", path for the training set)
-    -dev_file           (default "../../data/t_given_s_dev.txt", path for the training set)
-    -test_file          (default "../../data/t_given_s_test.txt", path for the training set)
+    -train_file         (default "data/t_given_s_train.txt", path for the training set)
+    -dev_file           (default "data/t_given_s_dev.txt", path for the training set)
+    -test_file          (default "data/t_given_s_test.txt", path for the training set)
     -alpha              (default 0.0001, learning rate)
     -readSequenceModel  (default true, whether to read a pretrained seq2seq model. this variable has to be set to true when training the model)
     -readFutureModel    (default false, whether to load a pretrained Soothsayer Model. this variable has to be set to false when training the model)
@@ -35,14 +35,14 @@ Available options include:
                             Otherwise, an error will be reported)
     -batch_size             (default 128, batch_size)
     -save_model_path        (default "save")
-    -train_file             (default "../../data/t_given_s_train.txt", path for the training set)
-    -dev_file               (default "../../data/t_given_s_dev.txt", path for the training set)
-    -test_file              (default "../../data/t_given_s_test.txt", path for the training set)
+    -train_file             (default "data/t_given_s_train.txt", path for the training set)
+    -dev_file               (default "data/t_given_s_dev.txt", path for the training set)
+    -test_file              (default "data/t_given_s_test.txt", path for the training set)
     -alpha                  (default 0.01, learning rate)
-    -forward_params_file(default "../../Atten/save_t_given_s/params",input parameter files for a pre-trained Seq2Seqmodel p(t|s))
-    -forward_model_file     (default "../../Atten/save_s_given_t/model1", path for loading the pre-trained Seq2Seq model p(t|s))
-    -backward_params_file   (default "../../Atten/save_s_given_t/params",input parameter files for a pre-trained backward Seq2Seq model p(s|t))
-    -backward_model_file    (default "../../Atten/save_s_given_t/model1" path for loading the pre-trained backward Seq2Seq model p(s|t))
+    -forward_params_file(default "Atten/save_t_given_s/params",input parameter files for a pre-trained Seq2Seqmodel p(t|s))
+    -forward_model_file     (default "Atten/save_s_given_t/model1", path for loading the pre-trained Seq2Seq model p(t|s))
+    -backward_params_file   (default "Atten/save_s_given_t/params",input parameter files for a pre-trained backward Seq2Seq model p(s|t))
+    -backward_model_file    (default "Atten/save_s_given_t/model1" path for loading the pre-trained backward Seq2Seq model p(s|t))
     -readSequenceModel      (default true, whether to read a pretrained seq2seq model. this variable has to be set to true when during the model training period)
     -readFutureModel        (default false, whether to load a pretrained Soothsayer Model. this variable has to be set to false during the model training period)
     -PredictorFile          (path for load a pretrained Soothsayer Model. does not need it at model training time)
@@ -91,4 +91,4 @@ To run the decoder with a pre-trained Soothsayer model of backward probability:
         -PredictorWeight 1 \
         -Task backward
 
-If you want to perform MMI reranking at the end,  ``-MMI_params_file`` and ``-MMI_model_file`` have to be pre-specified.
+If you want to perform MMI reranking at the end, ``-MMI_params_file`` and ``-MMI_model_file`` have to be pre-specified.

@@ -66,7 +66,7 @@ All tokens have been transformed to indexes (dictionary file found at ``data/mov
 - [Decode](docs/Decode.md)
 - [Persona](docs/Persona.md)
 - [Adversarial](docs/Adversarial.md)
-- [Future_Prediction](docs/Future_Prediction.md)
+- [Future_Prediction](docs/Future.md)
 - [Distill](docs/Distill.md)
 
 # Modification

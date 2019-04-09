@@ -656,7 +656,7 @@ function AttenModel:train()
             self.lr = self.lr * 0.5
         end
 
-        local open_train_file = assert(io.open(self.params.train_file, "r"), 'cannot open file')
+        local train_file = assert(io.open(self.params.train_file, "r"), 'cannot open file')
         local End, Word_s, Word_t, Mask_s, Mask_t
         local End = 0
         local batch_n = 1
@@ -669,7 +669,7 @@ function AttenModel:train()
             End, self.Word_s, self.Word_t,
             self.Mask_s, self.Mask_t,
             self.Left_s, self.Left_t,
-            self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
+            self.Padding_s, self.Padding_t = self.dataset:read_train(train_file)
 
             if End == 1 then
                 break
@@ -693,7 +693,7 @@ function AttenModel:train()
             end
         end
 
-        open_train_file:close()
+        train_file:close()
         logger.info('Running test...')
         self.mode = "test"
         self:test()

@@ -1,9 +1,11 @@
-require "fbtorch"
 require "cunn"
 require "cutorch"
 require "nngraph"
-local params = torch.reload("./parse")
+
+local parse_args = require('Future/Backward/parser')
+local params = parse_args()
+local Model = require('Future/Backward/Model')
+
 cutorch.setDevice(params.gpu_index)
-model = torch.reload("./model")
-model:Initial(params)
+local model = Model.new(params)
 model:train()
