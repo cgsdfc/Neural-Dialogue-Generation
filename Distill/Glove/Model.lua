@@ -168,7 +168,7 @@ function GloveDistiller:GetScore()
         end
     end
 
-    if num_lines >= self.params.batch_size then 
+    if num_lines < self.params.batch_size then
         error('#Examples is smaller than batch_size, no score is computed!') 
     end
     

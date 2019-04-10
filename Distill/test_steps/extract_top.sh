@@ -10,4 +10,5 @@ INPUT_FILE=$SAVE_ROOT/$ROUND/tmp/decode.txt
 
 python Distill/Extract/extract_top.py \
     $INPUT_FILE \
-    $OUTPUT_FILE
+    $OUTPUT_FILE \
+    -freq_thres 5

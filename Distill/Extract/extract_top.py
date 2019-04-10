@@ -66,6 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('input_file')
     parser.add_argument('output_file')
     parser.add_argument('-dictPath', default='data/movie_25000', help='dictionary file')
+    parser.add_argument('-freq_thres', default=FREQ_THRESHOLD, help='frequency threshold')
     args = parser.parse_args()
 
     dictionary = load_dict(args.dictPath)

@@ -142,7 +142,7 @@ function RLModel:decodeSample()
     self.generate_model.params.setting = "sampling"
 end
 
-function RLModel:trainD(open_train_file)
+function RLModel:trainD(train_file)
     local End = 0
     self.generate_model:clear()
 
@@ -150,7 +150,7 @@ function RLModel:trainD(open_train_file)
     self.generate_model.Mask_s, self.generate_model.Mask_t,
     self.generate_model.Left_s, self.generate_model.Left_t,
     self.generate_model.Padding_s, self.generate_model.Padding_t,
-    self.generate_model.Source, self.generate_model.Target = self.generate_model.dataset:read_train(open_train_file)
+    self.generate_model.Source, self.generate_model.Target = self.generate_model.dataset:read_train(train_file)
 
     if End == 1 then
         return End
@@ -203,7 +203,7 @@ function RLModel:train()
         logger.info('Epoch: %d', self.iter)
         self.iter = self.iter + 1
 
-        local open_train_file = assert(io.open(self.params.trainData, "r"),
+        local train_file = assert(io.open(self.params.trainData, "r"),
             'cannot open trainData')
         local End = 0
 
@@ -227,7 +227,7 @@ function RLModel:train()
             for i = 1, self.params.dSteps do
                 logger.info('D-epoch: %d', i)
                 self.disc_model.mode = "train"
-                End = self:trainD(open_train_file)
+                End = self:trainD(train_file)
                 if End == 1 then
                     break
                 end
@@ -238,7 +238,7 @@ function RLModel:train()
                 for i = 1, self.params.gSteps do
                     logger.info('G-epoch: %d', i)
                     self.disc_model.mode = "test"
-                    local End, dis_pred = self:trainD(open_train_file)
+                    local End, dis_pred = self:trainD(train_file)
                     if End == 1 then
                         break
                     end
@@ -269,7 +269,7 @@ function RLModel:train()
             end
         end
 
-        open_train_file:close()
+        train_file:close()
 
         if self.params.saveModel then
             self:save()

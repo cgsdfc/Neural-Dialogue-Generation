@@ -17,7 +17,8 @@ ALL_TEST_SCRIPTS=(
     Adversarial/Discriminative/test_train_dis.sh
     Adversarial/Reinforce/test_reinforce.sh
 
-    Distill/test_all.sh
+    Distill/test_steps/test_all.sh
+    Distill/Pool/test_pool.sh
 
     Future/Length/test_length.sh
     Future/Backward/test_backward.sh
@@ -30,5 +31,3 @@ do
     echo "Run: $test"
     . ${test}
 done
-
-echo "All tests done!"

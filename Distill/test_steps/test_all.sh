@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 
-# Run one round of the distillation procedure.
+# Run all steps of one round of the distillation procedure.
 # There is no need to run many rounds since this is just *testing*.
 # If we can make one round work, we already eliminate a lot of bugs.
 
 ALL_TESTS=(
-    Distill/test/init.sh
-    Distill/test/train_seq2seq.sh
-    Distill/test/decode.sh
-    Distill/test/extract_top.sh
-    Distill/test/encoder_distill.sh
-    Distill/test/glove_distill.sh
-    Distill/Pool/test_pool.sh
+    Distill/test_steps/init.sh
+    Distill/test_steps/train_seq2seq.sh
+    Distill/test_steps/decode.sh
+    Distill/test_steps/extract_top.sh
+    Distill/test_steps/encoder_distill.sh
+    Distill/test_steps/glove_distill.sh
 )
 
 ALL_MESSAGES=(
