@@ -5,6 +5,32 @@ local GenModel = torch.class('GenModel', 'Decoder')
 local Dataset = require('Atten/Dataset')
 local logger = logroll.print_logger()
 
+-- This is the generative model for adversarial training.
+function GenModel:__init(params)
+    self.params = params
+    self.dataset = Dataset.new(params)
+
+    self.lstm_source = self:lstm_source_()
+    self.lstm_target = self:lstm_target_()
+    self.softmax = self:softmax_()
+
+    self.Modules = {}
+    self.Modules[#self.Modules + 1] = self.lstm_source
+    self.Modules[#self.Modules + 1] = self.lstm_target
+    self.Modules[#self.Modules + 1] = self.softmax
+    self.lstms_s = self:g_cloneManyTimes(self.lstm_source, self.params.source_max_length)
+    self.lstms_t = self:g_cloneManyTimes(self.lstm_target, self.params.target_max_length)
+    self.store_s = {}
+    self.store_t = {}
+
+    self:readModel()
+    self.mode = "decoding"
+
+    if self.params.dictPath ~= "" and self.params.dictPath ~= nil then
+        self:ReadDict()
+    end
+    self:CollectSampleForIllustration(self.params.dev_file)
+end
 
 function GenModel:GenerateSample()
     self.mode = "decoding"
@@ -40,35 +66,6 @@ function GenModel:GenerateSample()
 
     self.Words_sample = self.Words_sample:cuda()
     self.Padding_sample = self.Padding_sample:cuda()
-end
-
-function GenModel:__init(params)
-
-
-    self.params = params
-    self.dataset = Dataset.new(params)
-
-    self.lstm_source = self:lstm_source_()
-    self.lstm_target = self:lstm_target_()
-    self.softmax = self:softmax_()
-
-    self.Modules = {}
-    self.Modules[#self.Modules + 1] = self.lstm_source
-    self.Modules[#self.Modules + 1] = self.lstm_target
-    self.Modules[#self.Modules + 1] = self.softmax
-    self.lstms_s = self:g_cloneManyTimes(self.lstm_source, self.params.source_max_length)
-    self.lstms_t = self:g_cloneManyTimes(self.lstm_target, self.params.target_max_length)
-    self.store_s = {}
-    self.store_t = {}
-
-    self:readModel()
-    self.mode = "test"
-    self.mode = "decoding"
-
-    if self.params.dictPath ~= "" and self.params.dictPath ~= nil then
-        self:ReadDict()
-    end
-    self:CollectSampleForIllustration(self.params.dev_file)
 end
 
 function GenModel:Integrate(first)

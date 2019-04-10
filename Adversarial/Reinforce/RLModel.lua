@@ -9,24 +9,14 @@ local GenModel = require('Adversarial/Reinforce/GenModel')
 local DisModel = require('Adversarial/Discriminative/Model')
 local RLModel = torch.class('RLModel')
 
-
-function RLModel:__init(params)
-    params.save_params_file = path.join(params.saveFolder, 'params')
-    params.output_file = path.join(params.saveFolder, 'log')
-
-    if not path.isdir(params.saveFolder) then
-        logger.info('mkdir %s', params.saveFolder)
-        paths.mkdir(params.saveFolder)
-    end
-    self.params = params
-
+function RLModel:LoadGenModel()
     local filename = self.params.generate_params
     local file = torch.DiskFile(filename, "r"):binary()
     logger.info('loading generative_params from %s', filename)
     local generate_params = file:readObject()
     file:close()
 
-    generate_params.sample = params.sample
+    generate_params.sample = self.params.sample
     generate_params.alpha = generate_params.alpha * self.params.lr
     generate_params.model_file = self.params.generate_model
     generate_params.batch_size = self.params.batch_size
@@ -34,7 +24,7 @@ function RLModel:__init(params)
     generate_params.MonteCarloExample_N = self.params.MonteCarloExample_N
     generate_params.max_length = 40
     generate_params.min_length = 0
-    generate_params.dictPath = "data/movie_25000"
+    assert(generate_params.dictPath and path.isfile(generate_params.dictPath))
     generate_params.output_source_target_side_by_side = true
     generate_params.PrintOutIllustrationSample = true
     generate_params.beam_size = 1
@@ -62,13 +52,16 @@ function RLModel:__init(params)
 
     logger.info('loading weights for GenModel...')
     self.generate_model:readModel()
+end
 
-    filename = self.params.disc_params
+function RLModel:LoadDisModel()
+    local filename = self.params.disc_params
     local file = torch.DiskFile(filename, "r"):binary()
     logger.info('loading disc_params from %s', filename)
     local disc_params = file:readObject()
     file:close()
 
+    -- Override --
     disc_params.model_file = self.params.disc_model
     disc_params.source_max_length = 100
     disc_params.batch_size = self.params.batch_size
@@ -88,13 +81,27 @@ function RLModel:__init(params)
     logger.info('loading weights for DisModel...')
     self.disc_model:readModel()
     self.disc_model.mode = "train"
+end
+
+function RLModel:__init(params)
+    params.save_params_file = path.join(params.saveFolder, 'params')
+    params.output_file = path.join(params.saveFolder, 'log')
+
+    if not path.isdir(params.saveFolder) then
+        logger.info('mkdir %s', params.saveFolder)
+        paths.mkdir(params.saveFolder)
+    end
+    self.params = params
+
+    self:LoadGenModel()
+    self:LoadDisModel()
 
     self.base_line_sum = 0
     self.base_line_n = 0
-    self.log_ = assert(io.open(self.params.output_file, "w"),
-        'cannot open output_file')
+    self.log_ = assert(io.open(self.params.output_file, "w"), 'cannot open output_file')
 
     if self.params.baseline and self.params.baselineType == "critic" then
+        logger.info('creating baseline model...')
         self.baseline = nn.Linear(self.params.dimension, 1)
         self.baseline.weight:fill(0)
         self.baseline.bias:fill(0)
@@ -106,7 +113,9 @@ end
 
 
 function RLModel:save()
+    -- save both GenModel and DisModel.
     local models_to_save = { self.generate_model, self.disc_model }
+
     for i, model in ipairs(models_to_save) do
         logger.info('Saving weights for %s', model)
         model:save(self.iter)
@@ -114,6 +123,7 @@ function RLModel:save()
         model:saveParams()
     end
 
+    -- save params of the RLModel.
     local filename = self.params.save_params_file
     local file = torch.DiskFile(filename, "w"):binary()
     logger.info('Saving params for %s to %s', self, filename)
@@ -264,8 +274,6 @@ function RLModel:train()
         if self.params.saveModel then
             self:save()
         end
-
-        --        self.log_:close()
 
         if self.iter == self.params.max_iter then
             break
