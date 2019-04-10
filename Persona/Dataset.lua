@@ -6,7 +6,7 @@ local PersonaDataset = torch.class('PersonaDataset', 'Dataset')
 
 -- Read a single line from open_train_file.
 -- End == 1 when EOF is reached.
-function PersonaDataset:read_train(open_train_file)
+function PersonaDataset:read_train(train_file)
     local Source = {}
     local Target = {}
     local i = 0
@@ -16,14 +16,13 @@ function PersonaDataset:read_train(open_train_file)
 
     while 1 == 1 do
         i = i + 1
-        local str = open_train_file:read("*line")
+        local str = train_file:read("*line")
         if str == nil then
             End = 1
             break
         end
 
         local two_strings = stringx.split(str, "|")
-        assert(self.params.reverse ~= nil)
 
         local addressee_line, addressee_id
         if self.params.speakerSetting == "speaker_addressee" then

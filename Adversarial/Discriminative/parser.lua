@@ -4,7 +4,7 @@ local function parse_args()
     cmd:option("-dimension", 512, "vector dimensionality")
     cmd:option("-dropout", 0.2, "dropout rate")
 
-    -- Positive and Negative datasets for train, dev and test.
+    -- Positive and Negative datasets for train, dev and test --
     cmd:option("-pos_train_file", "data/t_given_s_train.txt",
         "human generated training examples (positive example)")
 

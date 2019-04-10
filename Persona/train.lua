@@ -14,7 +14,7 @@ logger.info('speakerSetting: %s', params.speakerSetting)
 
 logger.info('Creating Model...')
 local model = PersonaModel.new(params)
-logger.info('model.dataset: %s', model.dataset)
+logger.info('Using dataset class: %s', model.dataset)
 
 logger.info('Training begins...')
 model:train()

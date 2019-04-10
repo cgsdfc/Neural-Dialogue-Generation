@@ -5,8 +5,30 @@ local PersonaDataset = require('Persona/Dataset')
 local PersonaModel, AttenModel = torch.class('PersonaModel', 'AttenModel')
 local logger = logroll.print_logger()
 
+local function prepare_files(params)
+    params.save_prefix = path.join(params.saveFolder, "model")
+    params.save_params_file = path.join(params.saveFolder, "params")
+
+    if not path.isdir(params.saveFolder) then
+        paths.mkdir(params.saveFolder)
+    end
+
+    local files_to_check = {
+        'train_file',
+        'dev_file',
+        'test_file',
+        'dictPath',
+    }
+
+    for _, file in ipairs(files_to_check) do
+        if params[file] == nil or not path.isfile(params[file]) then
+            error(string.format('%s %s does not exist', file, params[file]))
+        end
+    end
+end
 
 function PersonaModel:__init(params)
+    prepare_files(params)
     AttenModel.__init(self, params)
     -- Replace dataset with our special version.
     self.dataset = PersonaDataset.new(params)
@@ -107,11 +129,11 @@ function PersonaModel:lstm_target_()
 end
 
 function PersonaModel:test()
-    local open_train_file
+    local test_file
     if self.mode == "dev" then
-        open_train_file = assert(io.open(self.params.dev_file, "r"), 'cannot open dev_file')
+        test_file = assert(io.open(self.params.dev_file, "r"), 'cannot open dev_file')
     elseif self.mode == "test" then
-        open_train_file = assert(io.open(self.params.test_file, "r"), 'cannot open test_file')
+        test_file = assert(io.open(self.params.test_file, "r"), 'cannot open test_file')
     end
 
     local sum_err_all = 0
@@ -124,7 +146,7 @@ function PersonaModel:test()
         self.Left_s, self.Left_t,
         self.Padding_s, self.Padding_t,
         self.Source, self.Target,
-        self.SpeakerID, self.AddresseeID = self.dataset:read_train(open_train_file)
+        self.SpeakerID, self.AddresseeID = self.dataset:read_train(test_file)
 
         if #self.Word_s == 0 or End == 1 then
             break
@@ -144,7 +166,7 @@ function PersonaModel:test()
         end
     end
 
-    open_train_file:close()
+    test_file:close()
     local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
     logger.info('Standard PPL: %f', ppl)
 end

@@ -16,7 +16,6 @@ cutorch.setDevice(params.gpu_index)
 
 cutorch.manualSeed(123)
 
-logger.info('Training DisModel')
 logger.info('Creating DisModel...')
 local model = DisModel.new(params)
 
