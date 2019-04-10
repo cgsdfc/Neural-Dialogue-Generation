@@ -7,7 +7,7 @@
 
 SAVE_FOLDER=./save/test-atten-forward
 
-th Atten/train_atten.lua -gpu_index 2 \
+th Atten/train.lua -gpu_index 2 \
     -train_file ./data/t_given_s_train.txt \
     -dev_file ./data/t_given_s_dev.txt \
     -test_file ./data/t_given_s_test.txt \

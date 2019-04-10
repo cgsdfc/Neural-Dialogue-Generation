@@ -17,7 +17,7 @@ test -f $TRAIN_FILE || exit 1
 
 mkdir -p ${SAVE_ROOT}/${ROUND}/model
 
-th Atten/train_atten.lua \
+th Atten/train.lua \
     -train_file ${TRAIN_FILE} \
     -dev_file ${DEV_FILE} \
     -test_file ${TEST_FILE} \

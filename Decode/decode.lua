@@ -1,4 +1,3 @@
--- Driver script to run decoding.
 require "cunn"
 require "cutorch"
 require "nngraph"

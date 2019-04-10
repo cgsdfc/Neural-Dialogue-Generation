@@ -32,7 +32,7 @@ training/dev/testing data: each line corresponds a source-target pair (in ``t_gi
 ## Commands
 To train the *forward* `p(t|s)` model, run
 
-    th Atten/train_atten.lua \
+    th Atten/train.lua \
         -train_file data/t_given_s_train.txt \
         -dev_file data/t_given_s_dev.txt \
         -test_file data/t_given_s_test.txt \
@@ -42,7 +42,7 @@ After training, the trained models will be saved in ``save_t_given_s/model*``. i
 
 To train the *backward* model `p(s|t)`, run
 
-    th Atten/train_atten.lua \
+    th Atten/train.lua \
         -train_file data/s_given_t_train.txt \
         -dev_file data/s_given_t_dev.txt \
         -test_file data/s_given_t_test.txt \

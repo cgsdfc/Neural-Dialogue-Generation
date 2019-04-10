@@ -1,7 +1,3 @@
-require 'logroll'
-
-local logger = logroll.print_logger()
-
 local function parse_args()
     local cmd = torch.CmdLine()
 
@@ -31,7 +27,6 @@ local function parse_args()
     cmd:option("-dictPath", "data/movie_25000", "dictionary file")
 
     local params = cmd:parse(arg)
-    print(arg)
     print(params)
     return params
 end

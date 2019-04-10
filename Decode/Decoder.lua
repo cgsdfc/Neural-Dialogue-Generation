@@ -91,7 +91,7 @@ function Decoder:LoadMMIModel()
     local model_params = file:readObject()
     file:close()
 
-    logger.info('Restoring weights for MMI model...')
+    logger.info('Loading weights for MMI model...')
     for i = 1, #self.MMI_model.Modules do
         local parameter, _ = self.MMI_model.Modules[i]:parameters()
         for j = 1, #parameter do
@@ -510,7 +510,9 @@ function Decoder:CollectSampleForIllustration(filename)
     local num = 0
     while true do
         local line = open_:read("*line")
-        if line == nil then break end
+        if line == nil then
+            break
+        end
         num = num + 1
         local two_strings = stringx.split(line, "|")
         self.SampleSource[num] = self.dataset:split(stringx.strip(two_strings[1]))
@@ -518,7 +520,9 @@ function Decoder:CollectSampleForIllustration(filename)
         self.SampleTarget[num] = torch.cat(torch.Tensor({ { self.dataset.EOS } }),
             torch.cat(self.dataset:split(stringx.strip(two_strings[2])),
                 torch.Tensor({ self.dataset.EOT })))
-        if num == 5 then break end
+        if num == 5 then
+            break
+        end
     end
 end
 

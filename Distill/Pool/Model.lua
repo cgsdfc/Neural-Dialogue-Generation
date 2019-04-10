@@ -6,8 +6,9 @@
 -- after previous round of distillation (or the initial data if it is the first round).
 -- Then the model is used to Decode a large number of context
 -- to response on the training set. For decoding, which set of data to use is not important and we
--- use the training set since it is large. Then the most frequent responses of the decoder output are
+-- choose the training set since it is large. Then the most frequent responses of the decoder output are
 -- extracted. Denoted as *top_response*, these responses are used as a filter to distill the dataset.
+--
 -- For the distillation step, you can choose from two distiller -- Glove and Encoder. They differ in
 -- the way to convert sentences to embeddings. Glove uses the pre-trained *Global Vector* (Pennington et al. 2018)
 -- a variant of word embedding, to map each word to a vector and use the sum of the words as the representation of a
@@ -15,6 +16,7 @@
 -- It is also better known as the hidden state of the last time step in the LSTM unit.
 -- Each distiller accepts their own options while they both accept some common options like distill_rate. Refer
 -- to their document for further information.
+--
 -- A distiller first assigns a *similarity score* to every examples in the data to distill. The score is based on
 -- cosine similarity and in many ways resembles the *embedding-based metric*. Then the examples with the highest
 -- score wihin the range allowed by distill_rate will be removed from the original set. All the train, develop and test dataset
@@ -25,12 +27,16 @@
 -- Implementation Details
 -- ======================
 -- The implementation makes use of a *symbolic directory* to run the system.
--- The symbolic directory is a nested table holded in memory and backed by physical directories.
+-- A symbolic directory is a nested table holded in memory and backed by physical directories.
 -- The keys of the table represent the symbolic dirs or files while the values of the table represent
--- phisical directories or files. This design allows the code interfacing each models
--- to manipulate directory and file in a similar way as in shell, using dot notation. It also separates
--- the creation of physical paths and the use of them. We make sure all paths needed in an invocation
--- are created before. It renders cleaner, more readable and shorter code, free of the cluster of mkdir and path.join.
+-- phisical directories or files.
+--
+-- This design allows the code interfacing each models
+-- to manipulate directory and file in a simple syntax, using dot notation. Since the number of models
+-- we interface is more than a few, this greatly simplifies things.
+-- It also separates the creation of physical paths and the use of them. We make sure all paths needed in an invocation
+-- of a model are created before.
+-- This renders clean, readable and shorter code, free of the cluster of mkdir and path.join.
 --
 -- The symbolic structure is:
 -- * round_dir
@@ -200,7 +206,7 @@ end
 -- Walk the symbolic tree and create necessary dirs.
 function DistillModelPool:create_physical_dirs()
     for _, files in pairs(self.round_dir) do
-        if files.dir then
+        if files.dir then -- prevent some missing dir.
             mkdir_if_not_yet(files.dir)
         end
     end
@@ -208,25 +214,22 @@ end
 
 -- Create all the symbolic dirs we need in all rounds.
 function DistillModelPool:create_symbolic_dirs()
+    -- Create a template round_dir table.
     local function template(round, params, atten_params)
         local phy_round_dir = path.join(params.saveFolder, tostring(round))
+
         local phy_model_dir = path.join(phy_round_dir, 'model')
         local phy_distill_dir = path.join(phy_round_dir, 'distill')
         local phy_tmp_dir = path.join(phy_round_dir, 'tmp')
-
-        local max_iter = atten_params.max_iter
 
         local train_file = path.basename(params.train_file)
         local dev_file = path.basename(params.dev_file)
         local test_file = path.basename(params.test_file)
 
+        local max_iter = atten_params.max_iter
+
         return {
-            -- Depend on round.
-            data_dir = {
-                train_file = '',
-                dev_file = '',
-                test_file = '',
-            },
+           -- data_dir to be filled later.
             model_dir = {
                 dir = phy_model_dir, -- point to itself.
                 params_file = path.join(phy_model_dir, 'params'),
@@ -294,7 +297,7 @@ function DistillModelPool:find_dict_file()
     local the_one = normalize(candidates[1].dictPath)
     for _, cand in ipairs(candidates) do
         local dp = normalize(cand.dictPath)
-        if dp ~= the_one then
+        if dp ~= the_one then -- if there is inconsistency.
             logger.warn('overriding dictPath %s from %s', dp, cand.params)
         end
     end

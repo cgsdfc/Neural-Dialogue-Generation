@@ -8,7 +8,6 @@ local Dataset = torch.class('Dataset')
 function Dataset:__init(params)
     self.params = params
     self.EOT = self.params.vocab_target -- end of target
-
     --end of source, you can think it as a buffer between source and target
     self.EOS = self.params.vocab_target - 1
     self.beta = self.params.vocab_target - 2

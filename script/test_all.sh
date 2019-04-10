@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script runs all the test scripts from all modules, sequentially
+# This script runs all the test scripts from all modules, sequentially.
 
 ALL_TEST_SCRIPTS=(
     Atten/test_atten.sh
@@ -18,6 +18,11 @@ ALL_TEST_SCRIPTS=(
     Adversarial/Reinforce/test_reinforce.sh
 
     Distill/test_all.sh
+
+    Future/Length/test_length.sh
+    Future/Backward/test_backward.sh
+    Future/Decode/test_decode_backward.sh
+    Future/Decode/test_decode_length.sh
 )
 
 for test in ${ALL_TEST_SCRIPTS[@]}

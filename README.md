@@ -42,11 +42,11 @@ In short:
 
     # Correct.
     cd Neural-Dialogue-Generation/
-    th Atten/train_atten.lua
+    th Atten/train.lua
     
     # Wrong!
     cd Neural-Dialogue-Generation/Atten/
-    th train_atten.lua
+    th train.lua
 
 For the most of time, you won't notice the problem of paths.
 

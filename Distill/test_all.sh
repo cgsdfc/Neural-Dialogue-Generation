@@ -11,6 +11,7 @@ ALL_TESTS=(
     Distill/test/extract_top.sh
     Distill/test/encoder_distill.sh
     Distill/test/glove_distill.sh
+    Distill/Pool/test_pool.sh
 )
 
 ALL_MESSAGES=(

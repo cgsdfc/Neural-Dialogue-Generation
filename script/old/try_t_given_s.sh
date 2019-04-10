@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-th train_atten.lua \
+th train.lua \
     -train_file ./data/t_given_s_train.txt \
     -dev_file ./data/t_given_s_dev.txt \
     -test_file ./data/t_given_s_test.txt \

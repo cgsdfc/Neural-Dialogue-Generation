@@ -161,9 +161,6 @@ function AttenModel:attention()
     return nn.gModule(inputs, { output })
 end
 
--- table.insert(table, pos, value) inserts value before pos.
--- table.insert(table, value) append value to the end of table.
-
 function AttenModel:lstm_target_()
     local inputs = {}
     for ll = 1, self.params.layers do
@@ -172,7 +169,6 @@ function AttenModel:lstm_target_()
         local c_ll = nn.Identity()()
         table.insert(inputs, c_ll)
     end
-    -- now inputs is [h_ll, c_ll]
 
     local context, source_mask
     context = nn.Identity()()
@@ -181,10 +177,8 @@ function AttenModel:lstm_target_()
     table.insert(inputs, x_)
     source_mask = nn.Identity()()
     table.insert(inputs, source_mask)
-    -- now inputs is [h_ll, c_ll, context, x_, source_mark]
 
     local outputs = {}
-    -- local LookupTable, input_word_embedding
     for ll = 1, self.params.layers do
         local prev_h = inputs[ll * 2 - 1]
         local prev_c = inputs[ll * 2]
@@ -675,7 +669,7 @@ function AttenModel:train()
             self.lr = self.lr * 0.5
         end
 
-        local train_file = assert(io.open(self.params.train_file, "r"), 'cannot open file')
+        local train_file = assert(io.open(self.params.train_file, "r"), 'cannot open train_file')
         local End, Word_s, Word_t, Mask_s, Mask_t
         local End = 0
         local batch_n = 1

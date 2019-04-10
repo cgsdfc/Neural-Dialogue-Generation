@@ -111,7 +111,7 @@ The summary file is `csv` file with these fields: `Score,Distilled,Example`:
 1. train a Seq2Seq model with attention on the dataset to be distilled:
 
 
-    th Atten/train_atten.lua \
+    th Atten/train.lua \
         -train_file ${TRAIN_FILE} \
         -dev_file ${DEV_FILE} \
         -test_file ${TEST_FILE} \
