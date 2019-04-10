@@ -16,13 +16,23 @@ local function getFuturePredictModel(Task)
     error('Unknown Task: ' .. Task)
 end
 
+local function sanity_check(params)
+    if params.Task == 'Length' then
+        if params.target_length == 0 then
+            logger.warn('Task is length but target_length is 0 posting no constrain on length!')
+        end
+    end
+end
+
 function FutureDecoder:__init(params)
-    logger.info('loading ')
+    sanity_check(params)
+    logger.info('Using Task %s', params.Task)
+    logger.info('loading pretrained attention params_file: %s', params.params_file)
     local params_file = torch.DiskFile(params.params_file):binary()
-    local model_params = params_file:readObject()
+    local atten_params = params_file:readObject()
     params_file:close()
 
-    for k, v in pairs(model_params) do
+    for k, v in pairs(atten_params) do
         if params[k] == nil then
             params[k] = v
         end
@@ -51,9 +61,8 @@ function FutureDecoder:__init(params)
     params.readSequenceModel = false
     params.readFutureModel = true
     local future_class = getFuturePredictModel(params.Task)
-    self.FuturePredictModel = future_class(params)
+    self.FuturePredictModel = future_class.new(params)
 
-    self.params.dictPath = "data/movie_25000"
     self:ReadDict()
 
     if self.params.MMI then
@@ -66,7 +75,8 @@ function FutureDecoder:decode_BS()
     local finish = {}
     self:model_forward()
 
-    local span_index1 = torch.expand(torch.reshape(torch.expand(torch.reshape(torch.range(1, self.params.beam_size), self.params.beam_size, 1),
+    local span_index1 = torch.expand(torch.reshape(torch.expand(torch.reshape(torch.range(1, self.params.beam_size),
+        self.params.beam_size, 1),
         self.params.beam_size, self.params.beam_size), 1, self.params.beam_size * self.params.beam_size),
         self.Word_s:size(1), self.params.beam_size * self.params.beam_size):cuda()
 
@@ -97,7 +107,8 @@ function FutureDecoder:decode_BS()
             local context = torch.reshape(self.context, self.context:size(1), 1, self.context:size(2), self.context:size(3))
             local context_ = torch.expand(context, context:size(1), self.params.beam_size, context:size(3), context:size(4))
             self.context_beam = torch.reshape(context_, context_:size(1) * context_:size(2), context_:size(3), context_:size(4))
-            context_ = torch.expand(context, context:size(1), self.params.beam_size * self.params.beam_size, context:size(3), context:size(4))
+            context_ = torch.expand(context, context:size(1),
+                self.params.beam_size * self.params.beam_size, context:size(3), context:size(4))
             self.context_beam_future = torch.reshape(context_, context_:size(1) * context_:size(2), context_:size(3), context_:size(4))
 
             local padding = torch.reshape(self.Padding_s, self.Padding_s:size(1), 1, self.Padding_s:size(2))
@@ -255,7 +266,8 @@ function FutureDecoder:decode_BS()
         if completed_history[i] == nil then
             completed_history[i] = {}
             completed_history[i][1] = {}
-            completed_history[i][1].string = beamHistory:sub((i - 1) * self.params.beam_size + 1, (i - 1) * self.params.beam_size + 1, 1, -1)
+            completed_history[i][1].string = beamHistory:sub((i - 1) * self.params.beam_size + 1,
+                (i - 1) * self.params.beam_size + 1, 1, -1)
             completed_history[i][1].score = scores[(i - 1) * self.params.beam_size + 1][1]
         end
     end

@@ -555,8 +555,8 @@ function Decoder:decode()
         self:saveParams()
     end
 
-    local open_train_file = assert(io.open(self.params.InputFile, "r"))
-    local open_write_file = assert(io.open(self.params.OutputFile, "w"))
+    local input_file = assert(io.open(self.params.InputFile, "r"))
+    local output_file = assert(io.open(self.params.OutputFile, "w"))
 
     local End = 0
     local batch_n = 0
@@ -569,9 +569,10 @@ function Decoder:decode()
         logger.info('loading InputFile...')
         End, self.Word_s, self.Word_t, self.Mask_s,
         self.Mask_t, self.Left_s, self.Left_t, self.Padding_s,
-        self.Padding_t, self.Source, self.Target = self.dataset:read_train(open_train_file)
+        self.Padding_t, self.Source, self.Target = self.dataset:read_train(input_file)
 
         if #self.Word_s == 0 then
+            logger.info('zero length Word_s. Stop')
             break
         end
 
@@ -600,15 +601,18 @@ function Decoder:decode()
         end
 
         logger.info('writing OutputFile...')
-        self:Output(completed_history, open_write_file, batch_n)
+        self:Output(completed_history, output_file, batch_n)
 
         local time2 = timer:time().real
         logger.info('Spent %f seconds', time2 - time1)
+
         if End == 1 then
+            logger.info('End reached. Stop')
             break
         end
     end
-    open_write_file:close()
+    output_file:close()
+    logger.info('decode done.')
 end
 
 return Decoder
