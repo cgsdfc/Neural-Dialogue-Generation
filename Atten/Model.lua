@@ -262,39 +262,57 @@ function AttenModel:SentencePpl()
 end
 
 function AttenModel:softmax_()
+    -- y: input for ground truth labels.
     local y = nn.Identity()()
+    -- h: input for lstm hidden state.
     local h = nn.Identity()()
+    -- h2y: output embedding, transforming h to logits.
     local h2y = nn.Linear(self.params.dimension, self.params.vocab_target):noBias()(h)
+    -- logsoftmax is taking log of the softmax -- log(softmax(x)). See help(nn.LogSoftMax)
+    -- pred: a distribution over possible tokens.
     local pred = nn.LogSoftMax()(h2y)
+    -- w: the weight parameter for ClassNLLCriterion.
+    -- this should be a 1D vector. We use uniform weitghts here.
     local w = torch.ones(self.params.vocab_target)
 
     w[self.dataset.target_dummy] = 0
+    -- The Negative Lok Likehood Criterion
+    -- See help(nn.ClassNLLCriterion)
     local Criterion = nn.ClassNLLCriterion(w)
     Criterion.sizeAverage = false
     local err = Criterion({ pred, y })
     local module = nn.gModule({ h, y }, { err, pred })
 
+    -- params'initializer: random uniform.
     module:getParameters():uniform(-self.params.init_weight, self.params.init_weight)
     return module:cuda()
 end
 
 function AttenModel:lstm_source_()
+    -- since gModule requires a list of inputs and a list of outputs,
+    -- all input and output nodes are collected in respective lists.
     local inputs = {}
+    -- prepare 2 * layers input nodes.
     for ll = 1, self.params.layers do
         table.insert(inputs, nn.Identity()())
         table.insert(inputs, nn.Identity()())
     end
 
+    -- inputs holds 2 * layers + 1 input nodes.
+    -- the last input is for input embeddings
     table.insert(inputs, nn.Identity()())
-    local outputs = {}
 
+    local outputs = {}
     for ll = 1, self.params.layers do
         local prev_h = inputs[ll * 2 - 1]
         local prev_c = inputs[ll * 2]
+        -- x is the input for current time step.
         local x
         if ll == 1 then
+            -- Embedding() layer V * D
             x = nn.LookupTable(self.params.vocab_source, self.params.dimension)(inputs[#inputs])
         else
+            -- takes previous output
             x = outputs[(ll - 1) * 2 - 1]
         end
 
@@ -302,6 +320,7 @@ function AttenModel:lstm_source_()
         local drop_h = nn.Dropout(self.params.dropout)(inputs[ll * 2 - 1])
         local i2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_x)
         local h2h = nn.Linear(self.params.dimension, 4 * self.params.dimension, false)(drop_h)
+        -- CAddTable sums a list of Tensor element-wise. What a strange name!
         local gates = nn.CAddTable()({ i2h, h2h })
         local reshaped_gates = nn.Reshape(4, self.params.dimension)(gates)
         local sliced_gates = nn.SplitTable(2)(reshaped_gates)

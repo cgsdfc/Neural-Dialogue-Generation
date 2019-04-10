@@ -70,20 +70,24 @@ function LenModel:model_forward()
     self.context = torch.Tensor(self.Word_s:size(1), self.Word_s:size(2), self.params.dimension):cuda()
     local output
 
+    -- run the encoder rnn.
     for t = 1, self.Word_s:size(2) do
         local input = {}
         if t == 1 then
+            -- Initial time step, zero input.
             for ll = 1, self.params.layers do
                 table.insert(input, torch.zeros(self.Word_s:size(1), self.params.dimension):cuda())
                 table.insert(input, torch.zeros(self.Word_s:size(1), self.params.dimension):cuda())
             end
         else
+            -- Feed output as input -- recurrent.
             input = self:clone_(output)
         end
 
         table.insert(input, self.Word_s:select(2, t))
         self.lstms_s[1]:evaluate()
         output = self.lstms_s[1]:forward(input)
+
         if self.Mask_s[t]:nDimension() ~= 0 then
             for i = 1, #output do
                 output[i]:indexCopy(1, self.Mask_s[t],
@@ -94,11 +98,14 @@ function LenModel:model_forward()
         self.context[{ {}, t }]:copy(output[2 * self.params.layers - 1])
     end
 
+    -- run the decoder rnn.
     for t = 1, self.Word_t:size(2) - 1 do
-        local lstm_input = {}
+        local lstm_input
         if t == 1 then
+            -- initialize from encoder's last hidden state.
             lstm_input = output
         else
+            -- recurrent
             lstm_input = {}
             for i = 1, 2 * self.params.layers do
                 lstm_input[i] = output[i]
@@ -108,6 +115,7 @@ function LenModel:model_forward()
         table.insert(lstm_input, self.context)
         table.insert(lstm_input, self.Word_t:select(2, t))
         table.insert(lstm_input, self.Padding_s)
+
         output = self.lstms_t[1]:forward(lstm_input)
         self.Length = self.Length - 1
 
@@ -116,9 +124,13 @@ function LenModel:model_forward()
         local length_left = self.Length:index(1, left_index)
         length_left = torch.reshape(length_left, length_left:size(1), 1):cuda()
 
+        -- update the value function
         self.map:zeroGradParameters()
+        -- predict len left using lstm output ht.
         local pred = self.map:forward(representation_left)
         local Error = self.mse:forward(pred, length_left)
+
+        -- Backprop.
         if self.mode == "train" then
             self.mse:backward(pred, length_left)
             self.map:backward(representation_left, self.mse.gradInput)

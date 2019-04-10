@@ -1,10 +1,10 @@
 require 'Decode/Decoder'
 require 'logroll'
 
-
 local logger = logroll.print_logger()
 local FutureDecoder = torch.class('FutureDecoder', 'Decoder')
 local Dataset = require('Atten/Dataset')
+
 
 local function getFuturePredictModel(Task)
     if Task == "length" then
@@ -17,7 +17,8 @@ local function getFuturePredictModel(Task)
 end
 
 function FutureDecoder:__init(params)
-    local params_file = torch.DiskFile(params.params_file, "r"):binary()
+    logger.info('loading ')
+    local params_file = torch.DiskFile(params.params_file):binary()
     local model_params = params_file:readObject()
     params_file:close()
 
@@ -26,7 +27,6 @@ function FutureDecoder:__init(params)
             params[k] = v
         end
     end
-    print(params)
     self.params = params
 
     self.dataset = Dataset.new(params)
@@ -46,13 +46,10 @@ function FutureDecoder:__init(params)
     self.store_t = {}
 
     self:readModel()
-    self.mode = "test"
-    --self:test()
     self.mode = "decoding"
 
     params.readSequenceModel = false
     params.readFutureModel = true
-
     local future_class = getFuturePredictModel(params.Task)
     self.FuturePredictModel = future_class(params)
 
@@ -70,7 +67,8 @@ function FutureDecoder:decode_BS()
     self:model_forward()
 
     local span_index1 = torch.expand(torch.reshape(torch.expand(torch.reshape(torch.range(1, self.params.beam_size), self.params.beam_size, 1),
-        self.params.beam_size, self.params.beam_size), 1, self.params.beam_size * self.params.beam_size), self.Word_s:size(1), self.params.beam_size * self.params.beam_size):cuda()
+        self.params.beam_size, self.params.beam_size), 1, self.params.beam_size * self.params.beam_size),
+        self.Word_s:size(1), self.params.beam_size * self.params.beam_size):cuda()
 
     local span_index2 = torch.expand(torch.reshape(self.params.beam_size * (torch.range(1, self.Word_s:size(1)) - 1),
         self.Word_s:size(1), 1), self.Word_s:size(1), self.params.beam_size):cuda()
@@ -148,7 +146,8 @@ function FutureDecoder:decode_BS()
             for i = 1, 2 * self.params.layers do
                 replicate_last[i] = torch.reshape(self.last[i], self.Word_s:size(1), self.params.beam_size, self.params.dimension)
                 replicate_last[i] = torch.repeatTensor(replicate_last[i], 1, self.params.beam_size, 1)
-                replicate_last[i] = torch.reshape(replicate_last[i], self.Word_s:size(1) * self.params.beam_size * self.params.beam_size, self.params.dimension)
+                replicate_last[i] = torch.reshape(replicate_last[i],
+                    self.Word_s:size(1) * self.params.beam_size * self.params.beam_size, self.params.dimension)
             end
 
             table.insert(replicate_last, self.context_beam_future)
@@ -207,7 +206,8 @@ function FutureDecoder:decode_BS()
                             local num_instance = #completed_history[example_index] + 1
                             completed_history[example_index][num_instance] = {}
                             completed_history[example_index][num_instance].string = his_sub
-                            completed_history[example_index][num_instance].score = extract_scores[i] / (completed_history[example_index][num_instance].string:size(2) + 1)
+                            completed_history[example_index][num_instance].score =
+                            extract_scores[i] / (completed_history[example_index][num_instance].string:size(2) + 1)
                         end
                     else
                         if self.params.target_length == 0 or completed_history[example_index] == nil then
@@ -219,7 +219,8 @@ function FutureDecoder:decode_BS()
                                 local num_instance = #completed_history[example_index] + 1
                                 completed_history[example_index][num_instance] = {}
                                 completed_history[example_index][num_instance].string = his_sub
-                                completed_history[example_index][num_instance].score = extract_scores[i] / (completed_history[example_index][num_instance].string:size(2) + 1)
+                                completed_history[example_index][num_instance].score =
+                                extract_scores[i] / (completed_history[example_index][num_instance].string:size(2) + 1)
                             end
                         end
                     end

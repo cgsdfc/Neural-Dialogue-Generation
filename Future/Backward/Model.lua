@@ -1,7 +1,8 @@
 require 'Decode/Decoder'
+require 'logroll'
 
+local logger = logroll.print_logger()
 local BackwardModel = torch.class('BackwardModel')
-local DICT_FILE = "data/movie_25000"
 
 -- torch.factory(name) returns the *factory function* for the class with *name*.
 -- A factory function creates an *empty* object of a class -- ideal for our *external initialization* use case
@@ -16,14 +17,23 @@ local function load_object(filename)
     return obj
 end
 
-local function load_decoder(params)
+local function load_model(params_file, model_file, dictPath)
+    logger.info('params_file: %s', params_file)
+    logger.info('model_file: %s', model_file)
+
     local model = DecoderFactory()
-    --    model
+    model.params = load_object(params_file)
+    model.params.dictPatt = dictPath
+    model.params.model_file = model_file
+    model:DecoderInitial()
+    model.mode = 'test'
+    return model
 end
 
 function BackwardModel:__init(params)
     self.params = params
 
+    logger.info('creating predictor network')
     self.map = nn.Sequential()
     self.map:add(nn.Linear(self.params.dimension, self.params.dimension))
     self.map:add(nn.Tanh())
@@ -31,35 +41,31 @@ function BackwardModel:__init(params)
     self.map:add(nn.Tanh())
     self.map:add(nn.Linear(self.params.dimension, 1))
     self.map = self.map:cuda()
-
     self.mse = nn.MSECriterion():cuda()
 
     if self.params.readSequenceModel then
-        self.forward_model = DecoderFactory()
-        self.forward_model.params = load_object(params.forward_params_file)
-        self.forward_model.params.dictPath = DICT_FILE
-        --self.forward_model.params.batch_size=self.params.batch_size
-        self.forward_model.params.model_file = params.forward_model_file
-        self.forward_model:DecoderInitial(self.forward_model.params_file)
-        self.forward_model.mode = "test"
+        logger.info('loading forward model')
+        self.forward_model = load_model(params.forward_params_file,
+            params.forward_model_file,
+            params.dictPath)
 
-        self.backward_model = DecoderFactory()
-        self.backward_model.params = load_object(params.backward_params_file)
-        --self.backward_model.params.batch_size=self.params.batch_size
-        self.backward_model.params.dictPath = DICT_FILE
-        self.backward_model.params.model_file = params.backward_model_file
-        self.backward_model:DecoderInitial()
-        self.backward_model.mode = "test"
+        logger.info('loading backward model')
+        self.backward_model = load_model(params.backward_params_file,
+            params.backward_model_file,
+            params.dictPath)
     end
 
     if self.params.readFutureModel then
+        local filename = self.params.FuturePredictorModelFile
+        logger.info('loading future predictor model from %s', filename)
         local parameter = self.map:parameters()
-        local read_params = load_object(self.params.FuturePredictorModelFile)
+        local future_params = load_object(filename)
+
         for j = 1, #parameter do
-            parameter[j]:copy(read_params[j])
+            parameter[j]:copy(future_params[j])
         end
     end
-    print("read data done")
+    logger.info("read data done")
 end
 
 function BackwardModel:model_forward()
@@ -67,7 +73,9 @@ function BackwardModel:model_forward()
     local instance = 0
 
     for t = 1, self.forward_model.Word_t:size(2) - 1 do
-        local representation_left = self.forward_model.store_t[t][2 * self.backward_model.params.layers - 1]:index(1, self.forward_model.Left_t[t])
+        local representation_left =
+        self.forward_model.store_t[t][2 * self.backward_model.params.layers - 1]:index(1, self.forward_model.Left_t[t])
+
         local predict_left = self.backward_score:index(1, self.forward_model.Left_t[t])
         self.map:zeroGradParameters()
         local pred = self.map:forward(representation_left)
@@ -88,6 +96,7 @@ end
 
 
 function BackwardModel:test()
+    logger.info('testing with file %s', self.params.test_file)
     local test_file = assert(io.open(self.params.test_file, "r"), 'cannot open test_file')
     local End, Word_s, Word_t, Mask_s, Mask_t
     local End = 0
@@ -104,7 +113,7 @@ function BackwardModel:test()
         self.forward_model.Mask_s, self.forward_model.Mask_t,
         self.forward_model.Left_s, self.forward_model.Left_t,
         self.forward_model.Padding_s, self.forward_model.Padding_t,
-        self.forward_model.Source, self.forward_model.Target = self.forward_model.Data:read_train(test_file)
+        self.forward_model.Source, self.forward_model.Target = self.forward_model.dataset:read_train(test_file)
 
         if End == 1 then
             break
@@ -116,19 +125,19 @@ function BackwardModel:test()
 
         for i = 1, #self.forward_model.Source do
             self.backward_model.Source[i] = self.forward_model.Target[i]:sub(1, -1, 2, self.forward_model.Target[i]:size(2) - 1)
-            self.backward_model.Target[i] = torch.cat(torch.Tensor({ { self.backward_model.Data.EOS } }),
-                torch.cat(self.forward_model.Source[i], torch.Tensor({ self.backward_model.Data.EOT })))
+            self.backward_model.Target[i] = torch.cat(torch.Tensor({ { self.backward_model.dataset.EOS } }),
+                torch.cat(self.forward_model.Source[i], torch.Tensor({ self.backward_model.dataset.EOT })))
         end
 
         self.backward_model.Word_s,
         self.backward_model.Mask_s,
         self.backward_model.Left_s,
-        self.backward_model.Padding_s = self.backward_model.Data:get_batch(self.backward_model.Source, true)
+        self.backward_model.Padding_s = self.backward_model.dataset:get_batch(self.backward_model.Source, true)
 
         self.backward_model.Word_t,
         self.backward_model.Mask_t,
         self.backward_model.Left_t,
-        self.backward_model.Padding_t = self.backward_model.Data:get_batch(self.backward_model.Target, false)
+        self.backward_model.Padding_t = self.backward_model.dataset:get_batch(self.backward_model.Target, false)
 
         self.backward_model:model_forward()
         self.backward_score = self.backward_model:SentencePpl()
@@ -140,45 +149,50 @@ function BackwardModel:test()
         totalError = totalError + BatchError
         n_instance = n_instance + BatchInstance
     end
-    print(totalError / n_instance)
+
+    local Error = totalError / n_instance
+    logger.info('totalError: %.4f', totalError)
+    logger.info('n_instance: %d', n_instance)
+    logger.info('Error: %.4f', Error)
 end
 
 function BackwardModel:save(batch_n)
     local params = self.map:parameters()
-    local filename = path.join(self.params.save_model_path, tostring(batch_n))
-    local file = torch.DiskFile(filename "w"):binary()
+    local filename = path.join(self.params.save_model_path, 'model' .. batch_n)
+    logger.info('saving future predictor params to %s', filename)
+    local file = torch.DiskFile(filename, "w"):binary()
     file:writeObject(params)
     file:close()
 end
 
 function BackwardModel:train()
-    local timer = torch.Timer()
     local End, Word_s, Word_t, Mask_s, Mask_t
     local End = 0
     local batch_n = 1
     self.iter = 0
 
+    logger.info('initial testing')
     self:test()
 
     while true do
         End = 0
+        logger.info('Epoch %d', self.iter)
         self.iter = self.iter + 1
         local train_file = assert(io.open(self.params.train_file, "r"), 'cannot open train_file')
 
         while End == 0 do
             batch_n = batch_n + 1
             if batch_n % 5000 == 0 then
-                print("batch_n  " .. batch_n)
+                logger.info('validate at batch_n: ', batch_n)
                 self:test()
                 self:save(batch_n)
             end
-            local time1 = timer:time().real
 
             End, self.forward_model.Word_s, self.forward_model.Word_t,
             self.forward_model.Mask_s, self.forward_model.Mask_t,
             self.forward_model.Left_s, self.forward_model.Left_t,
             self.forward_model.Padding_s, self.forward_model.Padding_t,
-            self.forward_model.Source, self.forward_model.Target = self.forward_model.Data:read_train(train_file)
+            self.forward_model.Source, self.forward_model.Target = self.forward_model.dataset:read_train(train_file)
 
             if End == 1 then
                 break
@@ -190,31 +204,33 @@ function BackwardModel:train()
 
             for i = 1, #self.forward_model.Source do
                 self.backward_model.Source[i] = self.forward_model.Target[i]:sub(1, -1, 2, self.forward_model.Target[i]:size(2) - 1)
-                self.backward_model.Target[i] = torch.cat(torch.Tensor({ { self.backward_model.Data.EOS } }),
-                    torch.cat(self.forward_model.Source[i], torch.Tensor({ self.backward_model.Data.EOT })))
+                self.backward_model.Target[i] = torch.cat(torch.Tensor({ { self.backward_model.dataset.EOS } }),
+                    torch.cat(self.forward_model.Source[i], torch.Tensor({ self.backward_model.dataset.EOT })))
             end
 
             self.backward_model.Word_s,
             self.backward_model.Mask_s,
             self.backward_model.Left_s,
-            self.backward_model.Padding_s = self.backward_model.Data:get_batch(self.backward_model.Source, true)
+            self.backward_model.Padding_s = self.backward_model.dataset:get_batch(self.backward_model.Source, true)
 
             self.backward_model.Word_t,
             self.backward_model.Mask_t,
             self.backward_model.Left_t,
-            self.backward_model.Padding_t = self.backward_model.Data:get_batch(self.backward_model.Target, false)
+            self.backward_model.Padding_t = self.backward_model.dataset:get_batch(self.backward_model.Target, false)
 
             self.backward_model:model_forward()
             self.backward_score = self.backward_model:SentencePpl()
 
             self.mode = "train"
             self:model_forward()
-            local time2 = timer:time().real
         end
 
         self:save(batch_n)
         self:test()
-        --break
+        if self.iter == self.params.max_iter then
+            logger.info("Done training!")
+            break
+        end
     end
 end
 
