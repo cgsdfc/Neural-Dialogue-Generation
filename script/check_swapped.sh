@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# This file verifies that the supposed-different file pairs are
+# *actually* the same.
+# Now the duplicates are cleanup, you should only run it to check the unmodified
+# problematic data dir.
+
 PREFIX=/home/cgsdfc/OpenSubData/
 
 ITEMS=( 2_3 2_6 3_6 )

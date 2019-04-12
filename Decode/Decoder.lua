@@ -76,6 +76,9 @@ function Decoder:LoadMMIModel()
     logger.info('Loading params for MMI model from %s', filename)
     local file = torch.DiskFile(filename, "r"):binary()
     local params = file:readObject()
+    if not params.train_backward then
+        error('Not a backward model. Cannot be used in MMI Reranking')
+    end
     file:close()
 
     params.batch_size = self.params.batch_size

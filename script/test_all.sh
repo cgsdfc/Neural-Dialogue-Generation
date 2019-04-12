@@ -4,12 +4,12 @@
 
 ALL_TEST_SCRIPTS=(
     Atten/test_train.sh
+    Atten/test_train_forward.sh
     Atten/test_train_backward.sh
 
     Decode/test_decode.sh
     Decode/test_decode_MMI.sh
 
-    Persona/test_persona.sh
     Persona/test_persona_speaker.sh
     Persona/test_persona_speaker_addressee.sh
 

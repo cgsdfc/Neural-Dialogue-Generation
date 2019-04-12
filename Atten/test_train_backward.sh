@@ -5,7 +5,7 @@
 # *on-the-fly* when the dataset is loaded into memory.
 # There is no need to prepare one forward and one backward dataset any more.
 
-SAVE_FOLDER=save/test-atten-train-backward
+SAVE_FOLDER=save/test-atten-backward
 
 th Atten/train.lua \
     -gpu_index 2 \
