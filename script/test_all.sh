@@ -3,9 +3,8 @@
 # This script runs all the test scripts from all modules, sequentially.
 
 ALL_TEST_SCRIPTS=(
-    Atten/test_atten.sh
-    Atten/test_atten_backward.sh
-    Atten/test_atten_forward.sh
+    Atten/test_train.sh
+    Atten/test_train_backward.sh
 
     Decode/test_decode.sh
     Decode/test_decode_MMI.sh

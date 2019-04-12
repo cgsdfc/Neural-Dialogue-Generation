@@ -48,15 +48,15 @@ function Dataset:get_batch(Sequences, isSource)
             max_length = Sequences[i]:size(2)
         end
     end
-    
+
     if isSource then
         Words = torch.Tensor(#Sequences, max_length):fill(1)
     else
         Words = torch.Tensor(#Sequences, max_length):fill(self.target_dummy)
     end
-    
+
     Padding = torch.Tensor(#Sequences, max_length):fill(0)
-    
+
     for i = 1, #Sequences do
         if isSource then
             Words:sub(i, i, max_length - Sequences[i]:size(2) + 1, max_length):copy(Sequences[i])
@@ -66,14 +66,14 @@ function Dataset:get_batch(Sequences, isSource)
             Padding:sub(i, i, 1, Sequences[i]:size(2)):fill(1)
         end
     end
-    
+
     Mask = {}
     Left = {}
     for i = 1, Words:size(2) do
         Mask[i] = torch.LongTensor(torch.find(Padding:sub(1, -1, i, i), 0))
         Left[i] = torch.LongTensor(torch.find(Padding:sub(1, -1, i, i), 1))
     end
-    
+
     Words = Words:cuda()
     Padding = Padding:cuda()
     return Words, Mask, Left, Padding
@@ -95,19 +95,27 @@ function Dataset:read_train(open_train_file)
         end
 
         local two_strings = stringx.split(str, "|")
-        assert(self.params.reverse ~= nil)
+        assert(#two_strings == 2)
+
+        if self.params.train_backward then
+            -- Swap source and target *in memory*
+            local tmp = two_strings[1]
+            two_strings[1] = two_strings[2]
+            two_strings[2] = tmp
+        end
 
         if self.params.reverse then
+            -- reserve and *words* of source. It can help lstm converge faster.
+            -- with attention however, this is seldomly used.
             Source[i] = reverse(self:split(stringx.strip(two_strings[1])))
         else
             Source[i] = self:split(stringx.strip(two_strings[1]))
         end
 
-        Target[i] = torch.cat(
-            torch.Tensor({ { self.EOS } }), 
-            torch.cat(self:split(stringx.strip(two_strings[2])), 
-            torch.Tensor({ self.EOT }))
-        )
+        Target[i] = torch.cat(torch.Tensor({ { self.EOS } }),
+            torch.cat(self:split(stringx.strip(two_strings[2])),
+                torch.Tensor({ self.EOT })))
+
         if i == self.params.batch_size then
             break
         end

@@ -26,14 +26,14 @@ You are recommended to use `docker` to set up your environment. In particular, t
 First, ensure the necessary building blocks `nvidia-docker2` is installed and working. Then pull the docker image.
 
 We provide some handy scripts in `scripts/` to start the *torch interactive shell* or `th` and bash. All you need to do is
-to adjust the hard-coded path in the `script/start-bash.sh` and `script/start-th.sh`. Now test your environment with
+to adjust the hard-coded path in the `script/start_bash.sh` and `script/start_th.sh`. Now test your environment with
 
-    scripts/start-th.sh
+    scripts/start_th.sh
     
 If everything works, you shall see the greeting from `th`.
 To run the regression tests, fire the script:
 
-    script/test-all.sh
+    script/test_all.sh
     
 *Important:* All the bash scripts and all the hard-coded path assume the current working directory is the project root, namely
 `Neural-Dialogue-Generation/`. To run a script, you should sit on `Neural-Dialogue-Generation` and write the relative path to
