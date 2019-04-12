@@ -13,7 +13,7 @@ TASK=backward
 INPUT_FILE=data/t_given_s_test.txt
 OUTPUT_FILE=save/test-future-$TASK-decode/decode.txt
 
-SOOTHSAYER_MODEL=save/test-future-$TASK/model49
+SOOTHSAYER_MODEL=save/test-future-$TASK/model10
 PREDICTOR_WEIGHT=1
 
 th Future/Decode/decode.lua \
