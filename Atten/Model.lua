@@ -652,9 +652,9 @@ function AttenModel:train()
     local start_halving = false
     self.lr = self.params.alpha
 
-    logger.info('Initial testing...')
-    self.mode = "test"
-    self:test()
+    --    logger.info('Initial testing...')
+    --    self.mode = "test"
+    --    self:test()
 
     while true do
         logger.info("Epoch: %d", self.iter)
@@ -675,10 +675,13 @@ function AttenModel:train()
         local batch_n = 1
         local time1 = timer:time().real
 
+        local batch_timer = 0
         while End == 0 do
+            logger.info('batch_n: %d', batch_n)
             batch_n = batch_n + 1
             self:clear()
 
+            logger.info('reading a batch')
             End, self.Word_s, self.Word_t,
             self.Mask_s, self.Mask_t,
             self.Left_s, self.Left_t,
@@ -694,6 +697,8 @@ function AttenModel:train()
             end
 
             if train_this_batch then
+                local time1 = timer:time().real
+
                 self.mode = "train"
                 local time1 = timer:time().real
                 self.Word_s = self.Word_s:cuda()
@@ -703,20 +708,31 @@ function AttenModel:train()
                 self:model_forward()
                 self:model_backward()
                 self:update()
+                local time2 = timer:time().real
+                logger.info('Batch Time: %.4f', time2 - time1)
+                batch_timer = batch_timer + time2 - time1
+            end
+
+            if self.params.time_one_batch and batch_n == 10 then
+                local estimated_batch_time = batch_timer / 10
+                logger.info('Estimated Batch Time: %.4f', estimated_batch_time)
+                return
             end
         end
 
         train_file:close()
-        logger.info('Running test...')
-        self.mode = "test"
-        self:test()
+        if self.iter % self.params.valid_freq == 0 then
+            logger.info('Running test...')
+            self.mode = "test"
+            self:test()
+        end
 
         if self.params.saveModel then
             self:save()
         end
 
         local time2 = timer:time().real
-        logger.info("Batch Time: %f", time2 - time1)
+        logger.info("Epoch Time: %f", time2 - time1)
 
         if self.iter == self.params.max_iter then
             logger.info("Done training!")
