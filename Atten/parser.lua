@@ -4,7 +4,7 @@ local function parse_args()
     cmd:option("-batch_size", 128, "batch size")
     cmd:option("-dimension", 512, "vector dimensionality")
     cmd:option("-dropout", 0.2, "dropout rate")
-    cmd:option('-valid_freq', 2, 'validation frequency')
+    cmd:option('-valid_freq', 5000, 'validation frequency in terms of number of *batches*')
 
     cmd:option("-train_file", "data/t_given_s_train.txt", "")
     cmd:option("-dev_file", "data/t_given_s_dev.txt", "")

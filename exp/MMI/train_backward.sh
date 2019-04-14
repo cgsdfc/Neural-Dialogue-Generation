@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
-DATA_ROOT=/home/cgsdfc/OpenSubData/dialogue_length2_3
+DATA_ROOT=/home/cgsdfc/OpenSubData/
 SAVE_ROOT=/home/cgsdfc/SavedModels/Neural-Dialogue-Generation
 
-BATCH_SIZE=20
+BATCH_SIZE=60 # This is the golden number
+DATASET=dialogue_length2_6
+DATA_ROOT=$DATA_ROOT/$DATASET
+
 DIMENSION=1000
 DROP_OUT=0.2
 INIT_WEIGHT=0.08
@@ -14,11 +17,11 @@ GPU_INDEX=2
 THRES=1
 MAX_ITER=8
 
-SAVE_FOLDER=$SAVE_ROOT/MMI-backward-dialen_2_3
+SAVE_FOLDER=$SAVE_ROOT/MMI-backward-$DATASET
 
-TRAIN_FILE=$DATA_ROOT/s_given_t_dialogue_length2_3_train.txt
-DEV_FILE=$DATA_ROOT/s_given_t_dialogue_length2_3_dev.txt
-TEST_FILE=$DATA_ROOT/s_given_t_dialogue_length2_3_test.txt
+TRAIN_FILE=$DATA_ROOT/train.txt
+DEV_FILE=$DATA_ROOT/dev.txt
+TEST_FILE=$DATA_ROOT/test.txt
 
 th Atten/train.lua \
     -batch_size $BATCH_SIZE \
@@ -36,4 +39,3 @@ th Atten/train.lua \
     -max_iter $MAX_ITER \
     -start_halve $START_HALVE \
     -train_backward \
-    -time_one_batch

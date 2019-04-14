@@ -557,14 +557,18 @@ function AttenModel:update()
 end
 
 -- Save model weights.
-function AttenModel:save(iter)
-    iter = iter or self.iter
+function AttenModel:save(id)
     local weights = {}
+
     for i = 1, #self.Modules do
         weights[i] = self.Modules[i]:parameters()
     end
 
-    local filename = string.format('%s%d', self.params.save_prefix, iter)
+    local filename = path.join(self.params.saveFolder, 'model')
+    if id ~= nil then
+        filename = filename .. id
+    end
+
     logger.info('Saving module weights to %s', filename)
 
     local file = torch.DiskFile(filename, "w"):binary()
@@ -609,16 +613,21 @@ function AttenModel:test()
         filename = self.params.test_file
     end
     logger.info('Using %s', filename)
-    local open_train_file = assert(io.open(filename, "r"), 'cannot open test_file')
+    local test_file = assert(io.open(filename, "r"), 'cannot open test_file')
 
     local sum_err_all = 0
     local total_num_all = 0
     local End = 0
+    local n_batch = 0
+
+    local timer = torch.Timer()
+    local time1 = timer:time().real
+
     while End == 0 do
         End, self.Word_s, self.Word_t,
         self.Mask_s, self.Mask_t,
         self.Left_s, self.Left_t,
-        self.Padding_s, self.Padding_t = self.dataset:read_train(open_train_file)
+        self.Padding_s, self.Padding_t = self.dataset:read_train(test_file)
 
         if #self.Word_s == 0 or End == 1 then
             break
@@ -626,6 +635,9 @@ function AttenModel:test()
 
         if (self.Word_s:size(2) < self.params.source_max_length and
                 self.Word_t:size(2) < self.params.target_max_length) then
+            logger.info('n_batch: %d', n_batch)
+            n_batch = n_batch + 1
+
             self.mode = "test"
             self.Word_s = self.Word_s:cuda()
             self.Word_t = self.Word_t:cuda()
@@ -637,10 +649,14 @@ function AttenModel:test()
         end
     end
 
-    open_train_file:close()
+    test_file:close()
+    local time2 = timer:time().real
+    logger.info('Test Time: %.4f', time2 - time1)
     local ppl = 1 / torch.exp(-sum_err_all / total_num_all)
     logger.info('standard perplexity: %f', ppl)
 end
+
+local N_SAMPLE_BATCHES=50
 
 function AttenModel:train()
     if self.params.saveModel then
@@ -651,10 +667,6 @@ function AttenModel:train()
     self.iter = 0
     local start_halving = false
     self.lr = self.params.alpha
-
-    --    logger.info('Initial testing...')
-    --    self.mode = "test"
-    --    self:test()
 
     while true do
         logger.info("Epoch: %d", self.iter)
@@ -681,7 +693,6 @@ function AttenModel:train()
             batch_n = batch_n + 1
             self:clear()
 
-            logger.info('reading a batch')
             End, self.Word_s, self.Word_t,
             self.Mask_s, self.Mask_t,
             self.Left_s, self.Left_t,
@@ -700,39 +711,39 @@ function AttenModel:train()
                 local time1 = timer:time().real
 
                 self.mode = "train"
-                local time1 = timer:time().real
                 self.Word_s = self.Word_s:cuda()
                 self.Word_t = self.Word_t:cuda()
                 self.Padding_s = self.Padding_s:cuda()
-
                 self:model_forward()
                 self:model_backward()
                 self:update()
+
                 local time2 = timer:time().real
                 logger.info('Batch Time: %.4f', time2 - time1)
                 batch_timer = batch_timer + time2 - time1
             end
 
-            if self.params.time_one_batch and batch_n == 10 then
-                local estimated_batch_time = batch_timer / 10
+            -- timing
+            if self.params.time_one_batch and batch_n == N_SAMPLE_BATCHES then
+                local estimated_batch_time = batch_timer / N_SAMPLE_BATCHES
                 logger.info('Estimated Batch Time: %.4f', estimated_batch_time)
                 return
+            end
+
+            -- save and validate.
+            if not self.params.time_one_batch and batch_n % self.params.valid_freq == 0 then
+                self:save() -- a backup save.
+                logger.info('Running test...')
+                self.mode = "test"
+                self:test()
             end
         end
 
         train_file:close()
-        if self.iter % self.params.valid_freq == 0 then
-            logger.info('Running test...')
-            self.mode = "test"
-            self:test()
-        end
-
-        if self.params.saveModel then
-            self:save()
-        end
-
         local time2 = timer:time().real
         logger.info("Epoch Time: %f", time2 - time1)
+
+        self:save(self.iter) -- if we ever done an epoch.
 
         if self.iter == self.params.max_iter then
             logger.info("Done training!")
