@@ -94,3 +94,14 @@ with *S* and *T* exchanged.
 
 - beam_search: beam_size=200
 - max_length: 20
+
+# Logging
+- MMI_forward: 
+
+    
+    /var/lib/docker/containers/46c2fd721f3b5352be58b531468a6d599019037f40566a272335308a9f6a3869/46c2fd721f3b5352be58b531468a6d599019037f40566a272335308a9f6a3869-json.log
+
+- MMI_backward: 
+
+
+    /var/lib/docker/containers/9063a25070ba48702df19b7121088b2738bdd2a8cf37fb53351d41912989b97e/9063a25070ba48702df19b7121088b2738bdd2a8cf37fb53351d41912989b97e-json.log
