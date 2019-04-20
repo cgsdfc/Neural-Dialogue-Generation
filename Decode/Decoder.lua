@@ -573,7 +573,7 @@ function Decoder:decode()
     while End == 0 do
         local time1 = timer:time().real
 
-        logger.info('loading InputFile...')
+        logger.info('batch_n: %d', batch_n)
         End, self.Word_s, self.Word_t, self.Mask_s,
         self.Mask_t, self.Left_s, self.Left_t, self.Padding_s,
         self.Padding_t, self.Source, self.Target = self.dataset:read_train(input_file)
@@ -611,10 +611,10 @@ function Decoder:decode()
         self:Output(completed_history, output_file, batch_n)
 
         local time2 = timer:time().real
-        logger.info('Spent %f seconds', time2 - time1)
+        logger.info('Batch Time: %.4f', time2 - time1)
 
         if End == 1 then
-            logger.info('End reached. Stop')
+            logger.info('End of dataset. Stop')
             break
         end
     end
