@@ -4,7 +4,7 @@
 
 IMAGE=kaixhin/cuda-torch-mega:8.0
 
-PROJECT_ROOT=/home/cgsdfc/deployment/Models/Dialogue/Neural-Dialogue-Generation
+PROJECT_ROOT=/home/cgsdfc/deployment/Models/Neural-Dialogue-Generation
 DATA_ROOT=/home/cgsdfc/OpenSubData/
 SAVE_ROOT=/home/cgsdfc/SavedModels/Neural-Dialogue-Generation/
 
