@@ -24,10 +24,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('input')
+    parser.add_argument('-v', action='store_true')
     parser.add_argument('-d', action='store_true', help='dry run')
-
-    logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
+    if args.v:
+        logging.basicConfig(level=logging.INFO)
     data = load_input(args.input)
 
     if not args.d:
@@ -36,7 +37,7 @@ if __name__ == '__main__':
         t = time.time()
         with open(output, 'w') as f:
             f.writelines(data)
-        logging.info('write done with %.4f s', time.time() - t)
+        logging.info('write done in %.4f s', time.time() - t)
         print(output)
     else:
         logging.info('dry run')
