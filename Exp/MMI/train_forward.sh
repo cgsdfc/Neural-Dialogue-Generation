@@ -18,8 +18,11 @@ THRES=1
 MAX_ITER=8
 
 SAVE_FOLDER=$SAVE_ROOT/MMI-forward-$DATASET
+SHUFFLE="python script/data/shuffle.py"
 
 TRAIN_FILE=$DATA_ROOT/train.txt
+TRAIN_FILE_SHUFFLE=$($SHUFFLE $TRAIN_FILE)
+
 DEV_FILE=$DATA_ROOT/dev.txt
 TEST_FILE=$DATA_ROOT/test.txt
 
@@ -33,9 +36,11 @@ th Atten/train.lua \
     -gpu_index $GPU_INDEX \
     -thres $THRES \
     -saveFolder $SAVE_FOLDER \
-    -train_file $TRAIN_FILE \
+    -train_file $TRAIN_FILE_SHUFFLE \
     -dev_file $DEV_FILE \
     -test_file $TEST_FILE \
     -max_iter $MAX_ITER \
     -start_halve $START_HALVE \
     -restart
+
+rm $TRAIN_FILE_SHUFFLE
