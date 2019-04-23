@@ -38,3 +38,4 @@ th Atten/train.lua \
     -test_file $TEST_FILE \
     -max_iter $MAX_ITER \
     -start_halve $START_HALVE \
+    -restart

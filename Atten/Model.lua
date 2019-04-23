@@ -12,16 +12,40 @@ local Dataset = require("Atten/Dataset")
 local AttenModel = torch.class('AttenModel')
 local logger = logroll.print_logger()
 
+local N_SAMPLE_BATCHES = 50
+
+local shuffle_dataset = require('Atten/shuffle')
+
+local function readObject(filename)
+    local file = torch.DiskFile(filename):binary()
+    local data = file:readObject()
+    file:close()
+    return data
+end
 
 function AttenModel:__init(params)
-    params.save_prefix = path.join(params.saveFolder, "model")
+    params.save_model_file = path.join(params.saveFolder, "model")
     params.save_params_file = path.join(params.saveFolder, "params")
 
-    if not path.isdir(params.saveFolder) then
-        logger.info('mkdir %s', params.saveFolder)
-        paths.mkdir(params.saveFolder)
+    if params.restart then
+        logger.info('restart from %s', params.saveFolder)
+        assert(path.isfile(params.save_model_file), 'no previous model file')
+        assert(path.isfile(params.save_params_file), 'no previous params file')
+        local old_params = readObject(params.save_params_file)
+        -- params from command line overrides those from checkpoint.
+        for k, v in pairs(old_params) do
+            if params[k] == nil then
+                params[k] = v
+            end
+        end
+    else
+        if not path.isdir(params.saveFolder) then
+            logger.info('mkdir %s', params.saveFolder)
+            paths.mkdir(params.saveFolder)
+        end
     end
 
+    print(params)
     self.params = params
     self.dataset = Dataset.new(params)
 
@@ -46,6 +70,13 @@ function AttenModel:__init(params)
 
     if self.params.dictPath ~= "" and self.params.dictPath ~= nil then
         self:ReadDict()
+    end
+
+    if self.params.restart then
+        logger.info('loading previous model from %s', self.params.save_model_file)
+        self:readModel()
+        logger.info('shuffle train_file %s', params.train_file)
+        shuffle_dataset(params.train_file)
     end
 end
 
@@ -363,14 +394,15 @@ function AttenModel:model_forward()
         if self.mode == "train" then
             self.lstms_s[t]:training()
             output = self.lstms_s[t]:forward(input)
-        else self.lstms_s[1]:evaluate()
+        else
+            self.lstms_s[1]:evaluate()
             output = self.lstms_s[1]:forward(input)
         end
 
         if self.Mask_s[t]:nDimension() ~= 0 then
             for i = 1, #output do
                 output[i]:indexCopy(1, self.Mask_s[t],
-                    torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
+                        torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
             end
         end
 
@@ -428,7 +460,7 @@ function AttenModel:model_forward()
             if self.Mask_t[t]:nDimension() ~= 0 then
                 for i = 1, #output do
                     output[i]:indexCopy(1, self.Mask_t[t],
-                        torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
+                            torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
                 end
             end
 
@@ -464,7 +496,7 @@ function AttenModel:model_backward()
 
         if self.mode == "train" then
             local dh = self.softmax:backward({ self.softmax_h[t], current_word },
-                { torch.Tensor({ 1 }), torch.Tensor(softmax_output[2]:size()):fill(0):cuda() })
+                    { torch.Tensor({ 1 }), torch.Tensor(softmax_output[2]:size()):fill(0):cuda() })
 
             local d_store_t = self:clone_(d_output)
             table.insert(d_store_t, dh[1])
@@ -484,7 +516,7 @@ function AttenModel:model_backward()
             if self.Mask_t[t]:nDimension() ~= 0 then
                 for i = 1, 2 * self.params.layers + 2 do
                     now_d_input[i]:indexCopy(1, self.Mask_t[t],
-                        torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
+                            torch.zeros(self.Mask_t[t]:size(1), self.params.dimension):cuda())
                 end
             end
 
@@ -515,7 +547,7 @@ function AttenModel:model_backward()
             if self.Mask_s[t]:nDimension() ~= 0 then
                 for i = 1, #d_now_output - 1 do
                     d_now_output[i]:indexCopy(1,
-                        self.Mask_s[t], torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
+                            self.Mask_s[t], torch.zeros(self.Mask_s[t]:size(1), self.params.dimension):cuda())
                 end
             end
 
@@ -564,7 +596,7 @@ function AttenModel:save(id)
         weights[i] = self.Modules[i]:parameters()
     end
 
-    local filename = path.join(self.params.saveFolder, 'model')
+    local filename = self.params.save_model_file
     if id ~= nil then
         filename = filename .. id
     end
@@ -586,8 +618,8 @@ function AttenModel:saveParams()
 end
 
 function AttenModel:readModel()
-    logger.info('loading model weights from %s', self.params.model_file)
-    local file = torch.DiskFile(self.params.model_file, "r"):binary()
+    logger.info('loading model weights from %s', self.params.save_model_file)
+    local file = torch.DiskFile(self.params.save_model_file, "r"):binary()
     local model_params = file:readObject()
     file:close()
 
@@ -656,12 +688,8 @@ function AttenModel:test()
     logger.info('standard perplexity: %f', ppl)
 end
 
-local N_SAMPLE_BATCHES=50
-
 function AttenModel:train()
-    if self.params.saveModel then
-        self:saveParams()
-    end
+    self:saveParams()
 
     local timer = torch.Timer()
     self.iter = 0

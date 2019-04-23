@@ -24,14 +24,13 @@ local function parse_args()
     cmd:option("-saveFolder", "save", "the folder to save models and parameters")
     cmd:option("-reverse", false, "whether to reverse the sources")
     cmd:option("-gpu_index", 1, "the index of GPU to use")
-    cmd:option("-saveModel", true, "whether to save the trained model")
     cmd:option("-dictPath", "data/movie_25000", "dictionary file")
     cmd:option('-train_backward', false, 'if true, source and target will be swapped' ..
             'Use this option if you want to train a *backward* model')
 
     cmd:option('-time_one_batch', false, 'if true, print the time used to train on one batch')
+    cmd:option('-restart', false, 'if true, look into saveFolder for a previous saved model and params and train from those')
     local params = cmd:parse(arg)
-    print(params)
     return params
 end
 
