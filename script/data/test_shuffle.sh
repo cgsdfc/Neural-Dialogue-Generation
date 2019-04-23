@@ -2,4 +2,4 @@
 
 INPUT=/home/cgsdfc/OpenSubData/dialogue_length2_6/dev.txt
 
-python script/data/shuffle.py $INPUT
+python script/data/shuffle.py $INPUT -v

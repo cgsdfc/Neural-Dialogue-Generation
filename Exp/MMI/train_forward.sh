@@ -42,5 +42,3 @@ th Atten/train.lua \
     -max_iter $MAX_ITER \
     -start_halve $START_HALVE \
     -restart
-
-rm $TRAIN_FILE_SHUFFLE

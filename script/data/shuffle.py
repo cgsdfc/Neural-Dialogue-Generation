@@ -1,12 +1,9 @@
-"""
-Shuffle a dataset file *in place*.
-"""
 import numpy as np
 import argparse
 import logging
 import time
-import tempfile
-import os
+
+SUFFIX = '_shuffle.txt'
 
 
 def load_input(filename):
@@ -18,6 +15,10 @@ def load_input(filename):
     np.random.shuffle(data)
     logging.info('shuffle in %.4f s', time.time() - t)
     return data
+
+
+def get_output(filename):
+    return filename + SUFFIX
 
 
 if __name__ == '__main__':
@@ -32,12 +33,9 @@ if __name__ == '__main__':
     data = load_input(args.input)
 
     if not args.d:
-        _, output = tempfile.mkstemp(prefix=os.path.basename(args.input))
-        logging.info('output: %s', output)
+        output = get_output(args.input)
         t = time.time()
         with open(output, 'w') as f:
             f.writelines(data)
-        logging.info('write done in %.4f s', time.time() - t)
+        logging.info('write to %s in %.4f s', output, time.time() - t)
         print(output)
-    else:
-        logging.info('dry run')
