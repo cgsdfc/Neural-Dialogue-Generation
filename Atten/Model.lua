@@ -14,8 +14,6 @@ local logger = logroll.print_logger()
 
 local N_SAMPLE_BATCHES = 50
 
-local shuffle_dataset = require('Atten/shuffle')
-
 local function readObject(filename)
     local file = torch.DiskFile(filename):binary()
     local data = file:readObject()
@@ -75,8 +73,6 @@ function AttenModel:__init(params)
     if self.params.restart then
         logger.info('loading previous model from %s', self.params.save_model_file)
         self:readModel()
-        logger.info('shuffle train_file %s', params.train_file)
-        shuffle_dataset(params.train_file)
     end
 end
 
