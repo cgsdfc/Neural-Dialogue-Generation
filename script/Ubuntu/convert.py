@@ -65,6 +65,12 @@ def get_length_stats(dataset):
     return list(map(int, ave_len))
 
 
+def truncate(lst, max_len):
+    if max_len is not None and max_len > 0:
+        lst = lst[:max_len]
+    return lst
+
+
 def convert_dataset(dataset, output, context_max_len=None, response_max_len=None):
     def process(lst, max_len):
         if max_len is not None and max_len > 0:
@@ -90,14 +96,18 @@ def make_out_name(prefix, input):
     return os.path.join(prefix, name)
 
 
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input')
-    parser.add_argument('-l', '--len_stats', action='store_true')
+    parser.add_argument('-p', '--prefix')
 
+    # show len stats
+    parser.add_argument('-l', '--len_stats', action='store_true')
     parser.add_argument('--convert-dict', action='store_true')
     parser.add_argument('--convert-data', action='store_true')
-    parser.add_argument('-p', '--prefix')
+    parser.add_argument('--convert-eval', action='store_true')
 
     parser.add_argument('-context_max_len', type=int, default=50)
     parser.add_argument('-response_max_len', type=int, default=50)
