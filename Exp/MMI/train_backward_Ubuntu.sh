@@ -8,7 +8,7 @@ INIT_WEIGHT=0.08
 ALPHA=0.1
 START_HALVE=5
 LAYERS=4
-GPU_INDEX=2
+GPU_INDEX=1
 THRES=1
 MAX_ITER=8
 MAX_LEN=51
@@ -37,7 +37,6 @@ th Atten/train.lua \
     -max_iter $MAX_ITER \
     -start_halve $START_HALVE \
     -train_backward \
-    -restart \
     -source_max_length $MAX_LEN \
     -target_max_length $MAX_LEN \
     -dictPath $DICK_FILE \

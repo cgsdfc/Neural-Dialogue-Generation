@@ -18,7 +18,7 @@ SAVE_FOLDER=/home/cgsdfc/SavedModels/Neural-Dialogue-Generation/Ubuntu/MMI-forwa
 TRAIN_FILE=/home/cgsdfc/JiweiLi_Ubuntu/Training.dialogues.txt
 DEV_FILE=/home/cgsdfc/JiweiLi_Ubuntu/Validation.dialogues.txt
 TEST_FILE=/home/cgsdfc/JiweiLi_Ubuntu/Test.dialogues.txt
-DICK_FILE=/home/cgsdfc/JiweiLi_Ubuntu/ubuntu_20000
+DICT_FILE=/home/cgsdfc/JiweiLi_Ubuntu/ubuntu_20000
 
 th Atten/train.lua \
     -batch_size $BATCH_SIZE \
@@ -35,9 +35,8 @@ th Atten/train.lua \
     -test_file $TEST_FILE \
     -max_iter $MAX_ITER \
     -start_halve $START_HALVE \
-    -restart \
     -source_max_length $MAX_LEN \
     -target_max_length $MAX_LEN \
-    -dictPath $DICK_FILE \
+    -dictPath $DICT_FILE \
     -vocab_source $VOCAB_SIZE \
     -vocab_target $VOCAB_SIZE
