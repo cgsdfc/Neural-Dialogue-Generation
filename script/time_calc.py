@@ -96,7 +96,6 @@ atten_stats = {
     'd2_6_bs_60_test': Statistics(d2_3_test, 60, 1.1624),  # less than one hour.
 
     'd2_6_bs_50_train': Statistics(d2_3_train, 50, 1.0584),  # 8.3 days.
-
 }
 
 if __name__ == '__main__':

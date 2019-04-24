@@ -30,12 +30,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.v:
         logging.basicConfig(level=logging.INFO)
-    data = load_input(args.input)
+
+    output = get_output(args.input)
 
     if not args.d:
-        output = get_output(args.input)
+        data = load_input(args.input)
         t = time.time()
         with open(output, 'w') as f:
             f.writelines(data)
         logging.info('write to %s in %.4f s', output, time.time() - t)
-        print(output)
+
+    print(output)
